@@ -1,16 +1,16 @@
 import torch.nn as nn
+import torch.nn.functional as F
 import torch
 from mmdet.models.detectors.base import BaseDetector
 from mmdet.models import build_detector
 from mmcv.runner import  load_checkpoint, _load_checkpoint, load_state_dict
 from ..builder import DISTILLER,build_distill_loss
 from collections import OrderedDict
-
-
+import copy
 
 
 @DISTILLER.register_module()
-class FGDDistiller(BaseDetector):
+class MGDDistiller(BaseDetector):
     """Base distiller for detectors.
 
     It typically consists of teacher_model and student_model.
@@ -22,7 +22,7 @@ class FGDDistiller(BaseDetector):
                  teacher_pretrained=None,
                  init_student=False):
 
-        super(FGDDistiller, self).__init__()
+        super(MGDDistiller, self).__init__()
         
         self.teacher = build_detector(teacher_cfg.model,
                                         train_cfg=teacher_cfg.get('train_cfg'),
@@ -45,19 +45,16 @@ class FGDDistiller(BaseDetector):
 
             state_dict = OrderedDict(all_name)
             load_state_dict(self.student, state_dict)
-
+            
         self.distill_losses = nn.ModuleDict()
-        self.distill_cfg = distill_cfg
+        self.distill_cfg = distill_cfg   
 
         student_modules = dict(self.student.named_modules())
         teacher_modules = dict(self.teacher.named_modules())
         def regitster_hooks(student_module,teacher_module):
             def hook_teacher_forward(module, input, output):
-
                     self.register_buffer(teacher_module,output)
-                
             def hook_student_forward(module, input, output):
-
                     self.register_buffer( student_module,output )
             return hook_teacher_forward,hook_student_forward
         
@@ -113,7 +110,10 @@ class FGDDistiller(BaseDetector):
 
 
 
-    def forward_train(self, img, img_metas, **kwargs):
+    def forward_train(self, 
+                      img, 
+                      img_metas, 
+                      **kwargs):
 
         """
         Args:
@@ -128,30 +128,37 @@ class FGDDistiller(BaseDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components(student's losses and distiller's losses).
         """
-       
 
+        student_loss = dict()
+        batch_input_shape = tuple(img[0].size()[-2:])
+        for img_meta in img_metas:
+            img_meta['batch_input_shape'] = batch_input_shape
+        batch_size = img.size()[0]
+        adv_img = None
+        if 'adv' in kwargs.keys():
+            adv_img = kwargs.pop('adv')
+        cmb_img = torch.concat((img,adv_img),0) if adv_img is not None else img
+
+        stu_feat = self.student.extract_feat(cmb_img)
         with torch.no_grad():
-            self.teacher.eval()
-            feat = self.teacher.extract_feat(img)
-           
-        student_loss = self.student.forward_train(img, img_metas, **kwargs)
-        
-        
+            fea_t = self.teacher.extract_feat(cmb_img)
+
         buffer_dict = dict(self.named_buffers())
         for item_loc in self.distill_cfg:
-            
             student_module = 'student_' + item_loc.student_module.replace('.','_')
             teacher_module = 'teacher_' + item_loc.teacher_module.replace('.','_')
-            
             student_feat = buffer_dict[student_module]
             teacher_feat = buffer_dict[teacher_module]
-
             for item_loss in item_loc.methods:
                 loss_name = item_loss.name
-                
-                student_loss[loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat,kwargs['gt_bboxes'], img_metas)
-        
-        
+                if str(loss_name).startswith('adv'):
+                    student_loss[loss_name] = self.distill_losses[loss_name](student_feat[batch_size:batch_size*2],teacher_feat[batch_size:batch_size*2])
+                else:
+                    student_loss[loss_name] = self.distill_losses[loss_name](student_feat[0:batch_size], teacher_feat[0:batch_size])
+
+        img_feat = tuple(f[0:batch_size] for f in stu_feat)
+        student_loss.update(self.student.bbox_head.forward_train(img_feat, img_metas, **kwargs))
+
         return student_loss
     
     def simple_test(self, img, img_metas, **kwargs):
