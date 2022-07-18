@@ -1,5 +1,5 @@
 _base_ = [
-    '../../gfl/gfl_r50_fpn_1x_coco.py'
+    '../gfl/gfl_r50_fpn_1x_coco.py'
 ]
 # model settings
 find_unused_parameters=True

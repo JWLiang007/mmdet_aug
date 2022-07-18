@@ -1,5 +1,5 @@
 _base_ = [
-    '../../solo/solo_r50_fpn_1x_coco.py'
+    '../solo/solo_r50_fpn_1x_coco.py'
 ]
 # model settings
 find_unused_parameters=True

@@ -1,5 +1,5 @@
 _base_ = [
-    '../../fcos/fcos_center-normbbox-giou_r50_caffe_fpn_gn-head_mstrain_1x_coco.py',
+    '../fcos/fcos_center-normbbox-giou_r50_caffe_fpn_gn-head_mstrain_1x_coco.py',
 ]
 # model settings
 find_unused_parameters=True
