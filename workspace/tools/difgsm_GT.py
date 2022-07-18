@@ -13,8 +13,8 @@
 #                          wrap_fp16_model)
 #
 # # tag
-# # from mmdet.apis import multi_gpu_test, single_gpu_test
-# from mmdet.apis import multi_gpu_adv, single_gpu_adv
+# from mmdet.apis import multi_gpu_test, single_gpu_test
+# from adversarial.adv import multi_gpu_adv, single_gpu_adv
 #
 # from mmdet.datasets import (build_dataloader, build_dataset,
 #                             replace_ImageToTensor)

@@ -2,15 +2,15 @@ import torch.nn as nn
 import torch
 from mmdet.models.detectors.base import BaseDetector
 from mmdet.models import build_detector
-from mmcv.runner import  load_checkpoint, _load_checkpoint, load_state_dict
+from mmcv.runner import  load_checkpoint
 from ..builder import DISTILLER,build_distill_loss
-from collections import OrderedDict
+
 
 
 
 
 @DISTILLER.register_module()
-class FGDDistiller(BaseDetector):
+class CWDDistiller(BaseDetector):
     """Base distiller for detectors.
 
     It typically consists of teacher_model and student_model.
@@ -19,41 +19,31 @@ class FGDDistiller(BaseDetector):
                  teacher_cfg,
                  student_cfg,
                  distill_cfg=None,
-                 teacher_pretrained=None,
-                 init_student=False):
+                 teacher_pretrained=None,):
 
-        super(FGDDistiller, self).__init__()
+        super(CWDDistiller, self).__init__()
         
         self.teacher = build_detector(teacher_cfg.model,
                                         train_cfg=teacher_cfg.get('train_cfg'),
                                         test_cfg=teacher_cfg.get('test_cfg'))
         self.init_weights_teacher(teacher_pretrained)
-        self.teacher.eval()
 
+        
+        self.teacher.eval()
         self.student= build_detector(student_cfg.model,
                                         train_cfg=student_cfg.get('train_cfg'),
                                         test_cfg=student_cfg.get('test_cfg'))
         self.student.init_weights()
-        if init_student:
-            t_checkpoint = _load_checkpoint(teacher_pretrained)
-            all_name = []
-            for name, v in t_checkpoint["state_dict"].items():
-                if name.startswith("backbone."):
-                    continue
-                else:
-                    all_name.append((name, v))
-
-            state_dict = OrderedDict(all_name)
-            load_state_dict(self.student, state_dict)
+        
 
         self.distill_losses = nn.ModuleDict()
-        self.distill_cfg = distill_cfg
 
+        self.distill_cfg = distill_cfg
         student_modules = dict(self.student.named_modules())
         teacher_modules = dict(self.teacher.named_modules())
         def regitster_hooks(student_module,teacher_module):
             def hook_teacher_forward(module, input, output):
-
+                
                     self.register_buffer(teacher_module,output)
                 
             def hook_student_forward(module, input, output):
@@ -78,13 +68,16 @@ class FGDDistiller(BaseDetector):
                 self.distill_losses[loss_name] = build_distill_loss(item_loss)
     def base_parameters(self):
         return nn.ModuleList([self.student,self.distill_losses])
-
+    def discriminator_parameters(self):
+        return self.discriminator
 
     @property
     def with_neck(self):
         """bool: whether the detector has a neck"""
         return hasattr(self.student, 'neck') and self.student.neck is not None
 
+    # TODO: these properties need to be carefully handled
+    # for both single stage & two stage detectors
     @property
     def with_shared_head(self):
         """bool: whether the detector has a shared head in the RoI Head"""
@@ -132,9 +125,10 @@ class FGDDistiller(BaseDetector):
 
         with torch.no_grad():
             self.teacher.eval()
-            feat = self.teacher.extract_feat(img)
+            loss = self.teacher.extract_feat(img)
            
         student_loss = self.student.forward_train(img, img_metas, **kwargs)
+        
         
         
         buffer_dict = dict(self.named_buffers())
@@ -149,7 +143,7 @@ class FGDDistiller(BaseDetector):
             for item_loss in item_loc.methods:
                 loss_name = item_loss.name
                 
-                student_loss[loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat,kwargs['gt_bboxes'], img_metas)
+                student_loss[ loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat)
         
         
         return student_loss
