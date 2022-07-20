@@ -113,22 +113,16 @@ def parse_args():
     parser.add_argument('--local_rank', type=int, default=0)
 
     # attack argument
-    parser.add_argument('--attack', type=str, default='IoUnes_linf', choices=['IoUnes_linf', 'IoUnes_l2'], help='Attack.')
-    parser.add_argument('--exp_folder', type=str, default='/srv/hdd/results/od-black/mmdetection/sign_attack/adv', help='Experiment folder to store all output.')
-    parser.add_argument('--n_iter', type=int, default=5)
-    parser.add_argument('--p', type=str, default='inf', choices=['inf', 'l2'])
-    parser.add_argument('--targeted', default=False)
-    parser.add_argument('--model', default='Faster-RCNN')
-    parser.add_argument('--eps', type=float, default=0.05, help='Radius of the Lp ball.0.05*4.52=0.22')
-    parser.add_argument('--loss', type=str, default='cw_loss')
-    parser.add_argument('--fd_eta', type=float, default=0.01)
-    parser.add_argument('--attack_logistics', default=None)
-    parser.add_argument('--vis_attack_step', default=None)
-    parser.add_argument('--zeta', type=float, default='0.5')
-    parser.add_argument('--lambda1', type=float, default='1.0')
-    parser.add_argument('--patch_attack', default=None)
-    parser.add_argument('--lr', default=0.005)
-    parser.add_argument('--q', default=50)
+
+
+    parser.add_argument('--eps', type=float, default=15/255, help='maximum perturbation')
+    parser.add_argument('--alpha', type=float, default=4/255, help='step size')
+    parser.add_argument('--steps', type=int, default=5, help='step size')
+    parser.add_argument('--decay', type=float, default=1.0, help='momentum factor')
+    parser.add_argument('--resize_rate', type=float, default=0.9, help='resize factor used in input diversity')
+    parser.add_argument('--diversity_prob', type=float, default=0.5, help='the probability of applying input diversity')
+    parser.add_argument('--random_start', action='store_true', help='using random initialization of delta')
+
 
     args = parser.parse_args()
     if 'LOCAL_RANK' not in os.environ:

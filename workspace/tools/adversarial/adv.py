@@ -27,8 +27,7 @@ def single_gpu_adv(model,
 
     for i, data in enumerate(data_loader):
 
-
-        attack = DIFGSM(model,steps=args.n_iter)
+        attack = DIFGSM(model,eps=args.eps,alpha=args.alpha,steps=args.steps,decay= args.decay,resize_rate=args.resize_rate,diversity_prob=args.diversity_prob,random_start=args.random_start)
 
         adv = attack(data, (data['gt_bboxes'], data['gt_labels']))
 
@@ -85,7 +84,7 @@ def multi_gpu_adv(model, data_loader, args):
         prog_bar = mmcv.ProgressBar(len(dataset))
     time.sleep(2)  # This line can prevent deadlock problem in some cases.
     for i, data in enumerate(data_loader):
-        attack = DIFGSM(model, steps=args.n_iter)
+        attack = DIFGSM(model,eps=args.eps,alpha=args.alpha,steps=args.steps,decay= args.decay,resize_rate=args.resize_rate,diversity_prob=args.diversity_prob,random_start=args.random_start)
 
         adv = attack(data, (data['gt_bboxes'], data['gt_labels']))
 
