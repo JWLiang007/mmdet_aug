@@ -71,9 +71,9 @@ class DIFGSM(Attack):
         Overridden.
         """
         images = data['img'][0].clone().detach().to(self.device)
-        ub,lb = torch.max(images),torch.min(images)
-        eps = self.eps * (ub - lb )
-        alpha = self.alpha * (ub - lb)
+        ub,lb = torch.max(images.view(3,-1),dim=1).values,torch.min(images.view(3,-1),dim=1).values
+        eps = self.eps * torch.max(ub - lb )
+        alpha = self.alpha * torch.max(ub - lb)
         momentum = torch.zeros_like(images).detach().to(self.device)
 
         adv_images = images.clone().detach()
@@ -81,12 +81,12 @@ class DIFGSM(Attack):
         if self.random_start:
             # Starting at a uniformly random point
             adv_images = adv_images + torch.empty_like(adv_images).uniform_(-eps, eps)
-            adv_images = torch.clamp(adv_images, min=lb, max=ub).detach()
+            for  chn in range(adv_images.shape[1]):
+                adv_images[:,chn:chn+1,:,:] = torch.clamp(adv_images[:,chn:chn+1,:,:], min=lb[chn], max=ub[chn]).detach()
         new_data = {}
         new_data['img_metas'] = data['img_metas'][0]
         for i in range(self.steps):
             adv_images.requires_grad = True
-            data['img'][0] = adv_images
 
             new_data['img'] = self.input_diversity(adv_images)
 
@@ -107,7 +107,9 @@ class DIFGSM(Attack):
 
             adv_images = adv_images.detach() - alpha * grad.sign()
             delta = torch.clamp(adv_images - images, min=-eps, max=eps)
-            adv_images = torch.clamp(images + delta, min=lb, max=ub).detach()
+            for chn in range(adv_images.shape[1]):
+                adv_images[:,chn:chn+1,:,:] = torch.clamp(images[:,chn:chn+1,:,:] + delta[:,chn:chn+1,:,:], min=lb[chn], max=ub[chn]).detach()
 
+            data['img'][0] = adv_images
         return adv_images
 
