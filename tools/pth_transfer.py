@@ -4,8 +4,8 @@ import torch
 import argparse
 from collections import OrderedDict
 
-def change_model(args):
-    fgd_model = torch.load(args.fgd_path)
+def change_model(in_path,out_path):
+    fgd_model = torch.load(in_path)
     all_name = []
     for name, v in fgd_model["state_dict"].items():
         if name.startswith("student."):
@@ -14,7 +14,7 @@ def change_model(args):
             continue
     state_dict = OrderedDict(all_name)
     fgd_model['state_dict'] = state_dict
-    torch.save(fgd_model, args.output_path) 
+    torch.save(fgd_model, out_path)
 
            
 if __name__ == '__main__':
@@ -24,4 +24,4 @@ if __name__ == '__main__':
     parser.add_argument('--output_path', type=str, default='retina_res50_new.pth',metavar='N', 
                         help = 'pair path')
     args = parser.parse_args()
-    change_model(args)
+    change_model(args.fgd_path,args.output_path)
