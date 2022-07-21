@@ -259,7 +259,8 @@ def main():
             model,
             cfg.device,
             device_ids=[int(os.environ['LOCAL_RANK'])],
-            broadcast_buffers=False)
+            broadcast_buffers=False,
+            find_unused_parameters=True)
         # tag
         multi_gpu_adv(model, data_loader, args)
         # outputs = multi_gpu_test(
