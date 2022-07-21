@@ -20,6 +20,7 @@ from mmdet.utils import (build_ddp, build_dp, compat_cfg, get_device,
                          replace_cfg_vals, setup_multi_processes,
                          update_data_root)
 
+from pth_transfer import change_model
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -134,6 +135,14 @@ def main():
         raise ValueError('The output file must be a pkl file.')
 
     cfg = Config.fromfile(args.config)
+
+    distiller_cfg = cfg.get('distiller', None)
+    if distiller_cfg is not None:
+        cfg = Config.fromfile(cfg.student_cfg)
+        out_path = args.checkpoint.replace(args.checkpoint.split('/')[-1], 'stu_chkp.pth')
+        change_model(args.checkpoint,out_path)
+        args.checkpoint = out_path
+
 
     # replace the ${key} with the value of cfg.key
     cfg = replace_cfg_vals(cfg)

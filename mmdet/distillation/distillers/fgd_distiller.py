@@ -128,7 +128,12 @@ class FGDDistiller(BaseDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components(student's losses and distiller's losses).
         """
-       
+        if 'adv' in kwargs.keys():
+            adv_img = kwargs.pop('adv')
+            adv_feat_s = self.student.extract_feat(adv_img)
+            with torch.no_grad():
+                self.teacher.eval()
+                adv_feat_t = self.teacher.extract_feat(adv_img)
 
         with torch.no_grad():
             self.teacher.eval()
@@ -148,8 +153,11 @@ class FGDDistiller(BaseDetector):
 
             for item_loss in item_loc.methods:
                 loss_name = item_loss.name
-                
-                student_loss[loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat,kwargs['gt_bboxes'], img_metas)
+                if str(loss_name).startswith('adv'):
+                    student_loss[loss_name] = self.distill_losses[loss_name](adv_feat_s,adv_feat_t)
+
+                else:
+                    student_loss[loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat,kwargs['gt_bboxes'], img_metas)
         
         
         return student_loss
