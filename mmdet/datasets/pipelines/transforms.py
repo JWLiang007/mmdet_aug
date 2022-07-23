@@ -3,6 +3,8 @@ import copy
 import inspect
 import math
 import warnings
+import os
+import random
 
 import cv2
 import mmcv
@@ -575,6 +577,48 @@ class RandomShift:
         repr_str += f'(max_shift_px={self.max_shift_px}, '
         return repr_str
 
+@PIPELINES.register_module()
+class InstanceAug:
+
+    def __init__(self,
+                 size=32*32,
+                 prob=0.5,
+                 show_dir = None):
+        self.size = size
+        self.prob = prob
+        self.show_dir = show_dir
+
+    def __call__(self, results):
+        if random.random() > self.prob:
+            return results
+        assert 'adv' in results['img_fields']
+        adv_img  = results['adv']
+        ori_img = results['img']
+        find_s_bbox = False
+        for bbox in results['ann_info']['bboxes']:
+            ys,xs,ye,xe  = bbox.astype(int)
+            bbox_size = (xe - xs)*(ye - ys)
+            if bbox_size < self.size:
+                ori_img[xs:xe,ys:ye,:] = adv_img[xs:xe,ys:ye,:]
+                out_img = ori_img.copy()
+                out_img[xs:xe,ys:ys+3,:] = (0,0,255)
+                out_img[xs:xe,ye:ye+3,:] = (0,0,255)
+                out_img[xs:xs+3,ys:ye,:] = (0,0,255)
+                out_img[xe:xe+3,ys:ye,:] = (0,0,255)
+                find_s_bbox = True
+        if self.show_dir != None and find_s_bbox:
+            out_path = os.path.join(self.show_dir,results['ori_filename'])
+            mmcv.imwrite(out_img,out_path)
+        return results
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        repr_str += f'(size={self.size}, '
+        repr_str += f'prob={self.prob}, '
+        if self.show_dir is not None:
+            repr_str += f'show_dir={self.show_dir}, '
+        return repr_str
+
 
 @PIPELINES.register_module()
 class Pad:
@@ -758,7 +802,9 @@ class RandomCrop:
                  crop_type='absolute',
                  allow_negative_crop=False,
                  recompute_bbox=False,
-                 bbox_clip_border=True):
+                 bbox_clip_border=True,
+                 adaptive = False,
+                 l_size = 96*96):
         if crop_type not in [
                 'relative_range', 'relative', 'absolute', 'absolute_range'
         ]:
@@ -783,6 +829,8 @@ class RandomCrop:
             'gt_bboxes': 'gt_masks',
             'gt_bboxes_ignore': 'gt_masks_ignore'
         }
+        self.adaptive = adaptive
+        self.l_size = l_size
 
     def _crop_data(self, results, crop_size, allow_negative_crop):
         """Function to randomly crop images, bounding boxes, masks, semantic
@@ -892,6 +940,16 @@ class RandomCrop:
             dict: Randomly cropped results, 'img_shape' key in result dict is
                 updated according to crop size.
         """
+
+        if self.adaptive:
+            _crop = False
+            for bbox in results['ann_info']['bboxes']:
+                aera = ( bbox[2] - bbox[0] ) * ( bbox[3] - bbox[1] )
+                if aera > self.l_size:
+                    _crop = True
+                    break
+            if not _crop:
+                return results
         image_size = results['img'].shape[:2]
         crop_size = self._get_crop_size(image_size)
         results = self._crop_data(results, crop_size, self.allow_negative_crop)
