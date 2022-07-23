@@ -4,12 +4,11 @@ _base_ = [
 
 
 train_pipeline = [
-    dict(type='LoadImageFromFile',adv_img='/public/data/dataset/adv_voc/'),
+    dict(type='LoadImageFromFile',adv_img='/public/data/dataset/adv_voc_5_3/'),
     dict(type='LoadAnnotations', with_bbox=True),
     dict(type='InstanceAug',prob=0.1),
     dict(type='Resize', img_scale=(1000, 600), keep_ratio=True),
     dict(type='RandomFlip', flip_ratio=0.0),
-    dict(type='RandomCrop', crop_size=(0.8, 0.8), crop_type='relative_range',adaptive = True),
     dict(type='Normalize',
          mean=[123.675, 116.28, 103.53],
          std=[58.395, 57.12, 57.375],
