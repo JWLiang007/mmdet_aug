@@ -136,5 +136,5 @@ data = dict(
     train=dict(
         pipeline=train_pipeline),
 )
-evaluation = dict(interval=24)
+evaluation = dict(interval=1)
 checkpoint_config= dict(interval=1,max_keep_ckpts=1)
