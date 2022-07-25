@@ -804,7 +804,7 @@ class RandomCrop:
                  recompute_bbox=False,
                  bbox_clip_border=True,
                  adaptive = False,
-                 l_size = 96*96):
+                 bbox_size = (32,32)):
         if crop_type not in [
                 'relative_range', 'relative', 'absolute', 'absolute_range'
         ]:
@@ -830,7 +830,8 @@ class RandomCrop:
             'gt_bboxes_ignore': 'gt_masks_ignore'
         }
         self.adaptive = adaptive
-        self.l_size = l_size
+        assert len(bbox_size) == 2
+        self.bbox_size = bbox_size[0] * bbox_size[1]
 
     def _crop_data(self, results, crop_size, allow_negative_crop):
         """Function to randomly crop images, bounding boxes, masks, semantic
@@ -942,11 +943,11 @@ class RandomCrop:
         """
 
         if self.adaptive:
-            _crop = False
+            _crop = True
             for bbox in results['ann_info']['bboxes']:
                 aera = ( bbox[2] - bbox[0] ) * ( bbox[3] - bbox[1] )
-                if aera > self.l_size:
-                    _crop = True
+                if aera < self.bbox_size:
+                    _crop = False
                     break
             if not _crop:
                 return results
