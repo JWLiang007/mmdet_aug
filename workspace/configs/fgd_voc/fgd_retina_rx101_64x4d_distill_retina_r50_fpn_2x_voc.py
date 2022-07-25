@@ -103,5 +103,5 @@ optimizer_config = dict(_delete_=True,grad_clip=dict(max_norm=35, norm_type=2))
 data = dict(
     samples_per_gpu=batch_size,
 )
-evaluation = dict(interval=24)
+evaluation = dict(interval=1)
 checkpoint_config= dict(interval=1,max_keep_ckpts=1)
