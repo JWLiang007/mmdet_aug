@@ -2,15 +2,13 @@ import torch.nn as nn
 import torch
 from mmdet.models.detectors.base import BaseDetector
 from mmdet.models import build_detector
-from mmcv.runner import  load_checkpoint, _load_checkpoint, load_state_dict
+from mmcv.runner import  load_checkpoint
 from ..builder import DISTILLER,build_distill_loss
-from collections import OrderedDict
-
 
 
 
 @DISTILLER.register_module()
-class FGDDistiller(BaseDetector):
+class FKDDistiller(BaseDetector):
     """Base distiller for detectors.
 
     It typically consists of teacher_model and student_model.
@@ -20,9 +18,10 @@ class FGDDistiller(BaseDetector):
                  student_cfg,
                  distill_cfg=None,
                  teacher_pretrained=None,
-                 init_student=False):
+                 # init_student=False
+                 ):
 
-        super(FGDDistiller, self).__init__()
+        super(FKDDistiller, self).__init__()
         
         self.teacher = build_detector(teacher_cfg.model,
                                         train_cfg=teacher_cfg.get('train_cfg'),
@@ -34,17 +33,17 @@ class FGDDistiller(BaseDetector):
                                         train_cfg=student_cfg.get('train_cfg'),
                                         test_cfg=student_cfg.get('test_cfg'))
         self.student.init_weights()
-        if init_student:
-            t_checkpoint = _load_checkpoint(teacher_pretrained)
-            all_name = []
-            for name, v in t_checkpoint["state_dict"].items():
-                if name.startswith("backbone."):
-                    continue
-                else:
-                    all_name.append((name, v))
-
-            state_dict = OrderedDict(all_name)
-            load_state_dict(self.student, state_dict)
+        # if init_student:
+        #     t_checkpoint = _load_checkpoint(teacher_pretrained)
+        #     all_name = []
+        #     for name, v in t_checkpoint["state_dict"].items():
+        #         if name.startswith("backbone."):
+        #             continue
+        #         else:
+        #             all_name.append((name, v))
+        #
+        #     state_dict = OrderedDict(all_name)
+        #     load_state_dict(self.student, state_dict)
 
         self.distill_losses = nn.ModuleDict()
         self.distill_cfg = distill_cfg
@@ -143,6 +142,7 @@ class FGDDistiller(BaseDetector):
         
         
         buffer_dict = dict(self.named_buffers())
+
         for item_loc in self.distill_cfg:
             
             student_module = 'student_' + item_loc.student_module.replace('.','_')
@@ -153,12 +153,13 @@ class FGDDistiller(BaseDetector):
 
             for item_loss in item_loc.methods:
                 loss_name = item_loss.name
+                layer_idx = int(loss_name[-1])
                 if str(loss_name).startswith('adv'):
                     student_loss[loss_name] = self.distill_losses[loss_name](adv_feat_s,adv_feat_t)
 
                 else:
-                    student_loss[loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat,kwargs['gt_bboxes'], img_metas)
-        
+                    student_loss[loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat,layer_idx)
+
         
         return student_loss
     

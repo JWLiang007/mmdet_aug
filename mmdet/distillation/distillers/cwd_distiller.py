@@ -2,9 +2,9 @@ import torch.nn as nn
 import torch
 from mmdet.models.detectors.base import BaseDetector
 from mmdet.models import build_detector
-from mmcv.runner import  load_checkpoint
+from mmcv.runner import  load_checkpoint,_load_checkpoint, load_state_dict
 from ..builder import DISTILLER,build_distill_loss
-
+from collections import OrderedDict
 
 
 
@@ -19,7 +19,8 @@ class CWDDistiller(BaseDetector):
                  teacher_cfg,
                  student_cfg,
                  distill_cfg=None,
-                 teacher_pretrained=None,):
+                 teacher_pretrained=None,
+                 init_student=False):
 
         super(CWDDistiller, self).__init__()
         
@@ -34,7 +35,18 @@ class CWDDistiller(BaseDetector):
                                         train_cfg=student_cfg.get('train_cfg'),
                                         test_cfg=student_cfg.get('test_cfg'))
         self.student.init_weights()
-        
+        if init_student:
+            t_checkpoint = _load_checkpoint(teacher_pretrained)
+            all_name = []
+            for name, v in t_checkpoint["state_dict"].items():
+                if name.startswith("backbone."):
+                    continue
+                else:
+                    all_name.append((name, v))
+
+            state_dict = OrderedDict(all_name)
+            load_state_dict(self.student, state_dict)
+
 
         self.distill_losses = nn.ModuleDict()
 
@@ -121,7 +133,12 @@ class CWDDistiller(BaseDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components(student's losses and distiller's losses).
         """
-       
+        if 'adv' in kwargs.keys():
+            adv_img = kwargs.pop('adv')
+            adv_feat_s = self.student.extract_feat(adv_img)
+            with torch.no_grad():
+                self.teacher.eval()
+                adv_feat_t = self.teacher.extract_feat(adv_img)
 
         with torch.no_grad():
             self.teacher.eval()
@@ -142,8 +159,11 @@ class CWDDistiller(BaseDetector):
 
             for item_loss in item_loc.methods:
                 loss_name = item_loss.name
-                
-                student_loss[ loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat)
+                if str(loss_name).startswith('adv'):
+                    student_loss[loss_name] = self.distill_losses[loss_name](adv_feat_s,adv_feat_t)
+
+                else:
+                    student_loss[ loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat)
         
         
         return student_loss
