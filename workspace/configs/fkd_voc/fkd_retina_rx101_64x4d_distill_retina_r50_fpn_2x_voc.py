@@ -4,7 +4,10 @@ _base_ = [
 ]
 # model settings
 find_unused_parameters=True
-
+alpha_fkd=0.0004
+beta_fkd=0.02
+gamma_fkd=0.0004
+T_fkd=0.5
 model = dict()
 distiller = dict(
     type='FKDDistiller',
@@ -15,8 +18,10 @@ distiller = dict(
                          output_hook = True,
                          methods=[dict(type='FKDLoss',
                                        name='loss_fkd_fpn_4',
-                                       student_channels = 256,
-                                       teacher_channels = 256,
+                                       alpha_fkd=alpha_fkd,
+                                       beta_fkd=beta_fkd,
+                                       gamma_fkd=gamma_fkd,
+                                       T_fkd=T_fkd
                                        )
                                 ]
                         ),
@@ -25,8 +30,10 @@ distiller = dict(
                          output_hook = True,
                          methods=[dict(type='FKDLoss',
                                        name='loss_fkd_fpn_3',
-                                       student_channels = 256,
-                                       teacher_channels = 256,
+                                       alpha_fkd=alpha_fkd,
+                                       beta_fkd=beta_fkd,
+                                       gamma_fkd=gamma_fkd,
+                                       T_fkd=T_fkd
                                        )
                                 ]
                         ),
@@ -35,8 +42,10 @@ distiller = dict(
                          output_hook = True,
                          methods=[dict(type='FKDLoss',
                                        name='loss_fkd_fpn_2',
-                                       student_channels = 256,
-                                       teacher_channels = 256,
+                                       alpha_fkd=alpha_fkd,
+                                       beta_fkd=beta_fkd,
+                                       gamma_fkd=gamma_fkd,
+                                       T_fkd=T_fkd
                                        )
                                 ]
                         ),
@@ -45,8 +54,10 @@ distiller = dict(
                          output_hook = True,
                          methods=[dict(type='FKDLoss',
                                        name='loss_fkd_fpn_1',
-                                       student_channels = 256,
-                                       teacher_channels = 256,
+                                       alpha_fkd=alpha_fkd,
+                                       beta_fkd=beta_fkd,
+                                       gamma_fkd=gamma_fkd,
+                                       T_fkd=T_fkd
                                        )
                                 ]
                         ),
@@ -55,8 +66,10 @@ distiller = dict(
                          output_hook = True,
                          methods=[dict(type='FKDLoss',
                                        name='loss_fkd_fpn_0',
-                                       student_channels = 256,
-                                       teacher_channels = 256,
+                                       alpha_fkd=alpha_fkd,
+                                       beta_fkd=beta_fkd,
+                                       gamma_fkd=gamma_fkd,
+                                       T_fkd=T_fkd
                                        )
                                 ]
                         ),
@@ -75,4 +88,4 @@ data = dict(
     samples_per_gpu=batch_size,
 )
 evaluation = dict(interval=1)
-checkpoint_config= dict(interval=1,max_keep_ckpts=1)
+checkpoint_config= dict(interval=1)
