@@ -115,8 +115,8 @@ def parse_args():
     # attack argument
 
 
-    parser.add_argument('--eps', type=float, default=15/255, help='maximum perturbation')
-    parser.add_argument('--alpha', type=float, default=4/255, help='step size')
+    parser.add_argument('--eps', type=float, default=15, help='maximum perturbation')
+    parser.add_argument('--alpha', type=float, default=4, help='step size')
     parser.add_argument('--steps', type=int, default=5, help='step size')
     parser.add_argument('--decay', type=float, default=1.0, help='momentum factor')
     parser.add_argument('--resize_rate', type=float, default=0.9, help='resize factor used in input diversity')
@@ -125,6 +125,8 @@ def parse_args():
 
 
     args = parser.parse_args()
+    args.eps = args.eps / 255.0
+    args.alpha = args.alpha / 255.0
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
 
