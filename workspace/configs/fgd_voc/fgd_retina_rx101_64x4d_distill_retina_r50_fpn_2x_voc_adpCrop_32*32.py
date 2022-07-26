@@ -3,7 +3,7 @@ _base_ = [
 ]
 
 train_pipeline = [
-    dict(type='LoadImageFromFile',adv_img='/home/jwl/project/mmdetection_voc/workspace/out/'),
+    dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
     dict(type='Resize', img_scale=(1000, 600), keep_ratio=True),
     dict(type='RandomFlip', flip_ratio=0.0),
