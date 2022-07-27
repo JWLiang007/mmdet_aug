@@ -58,5 +58,5 @@ data = dict(
         img_prefix=data_root,
         pipeline=test_pipeline,
         classes=CLASSES))
-evaluation = dict(interval=12, metric='bbox')
+evaluation = dict(interval=1, metric='bbox')
 
