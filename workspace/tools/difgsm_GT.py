@@ -167,6 +167,8 @@ def main():
     if args.gen_adv_aug:
         cfg.data.test.ann_file = cfg.data.train.ann_file
         cfg.data.val.ann_file = cfg.data.train.ann_file
+        cfg.data.test.img_prefix = cfg.data.train.img_prefix
+        cfg.data.val.img_prefix = cfg.data.train.img_prefix
 
     if 'pretrained' in cfg.model:
         cfg.model.pretrained = None
