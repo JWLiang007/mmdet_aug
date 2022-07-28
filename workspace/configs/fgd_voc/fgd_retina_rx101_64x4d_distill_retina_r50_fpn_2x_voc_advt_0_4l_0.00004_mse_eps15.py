@@ -1,6 +1,5 @@
 _base_ = [
-    '../_base_/datasets/voc07_cocofmt.py',
-    '../_base_/schedules/schedule_2x.py', '../_base_/default_runtime.py'
+    './fgd_retina_rx101_64x4d_distill_retina_r50_fpn_2x_voc.py'
 ]
 # model settings
 find_unused_parameters=True
@@ -9,7 +8,10 @@ alpha_fgd=0.001
 beta_fgd=0.0005
 gamma_fgd=0.0005
 lambda_fgd=0.000005
-alpha_adv=0.00002
+# adv loss settings
+alpha_adv=0.00004
+loss_type='mse'
+
 model = dict()
 distiller = dict(
     type='FGDDistiller',
@@ -33,7 +35,8 @@ distiller = dict(
                                        student_channels = 256,
                                        teacher_channels = 256,
                                        alpha_adv=alpha_adv,
-                                       layer_idx=4
+                                       layer_idx=4,
+                                        loss_type = loss_type,
                                        )
                                 ]
                         ),
@@ -55,7 +58,8 @@ distiller = dict(
                                        student_channels = 256,
                                        teacher_channels = 256,
                                        alpha_adv=alpha_adv,
-                                        layer_idx=3
+                                        layer_idx=3,
+                                        loss_type = loss_type,
                                        )
                                 ]
                         ),
@@ -77,7 +81,8 @@ distiller = dict(
                                        student_channels = 256,
                                        teacher_channels = 256,
                                        alpha_adv=alpha_adv,
-                                        layer_idx=2
+                                        layer_idx=2,
+                                        loss_type = loss_type,
                                        )
                                 ]
                         ),
@@ -99,7 +104,8 @@ distiller = dict(
                                        student_channels = 256,
                                        teacher_channels = 256,
                                        alpha_adv=alpha_adv,
-                                        layer_idx=1
+                                        layer_idx=1,
+                                        loss_type = loss_type,
                                        )
                                 ]
                         ),
@@ -121,7 +127,8 @@ distiller = dict(
                                        student_channels = 256,
                                        teacher_channels = 256,
                                        alpha_adv=alpha_adv,
-                                        layer_idx=0
+                                        layer_idx=0,
+                                        loss_type = loss_type,
                                        )
                                 ]
                         ),
@@ -129,16 +136,9 @@ distiller = dict(
                    ]
     )
 
-student_cfg = 'configs/retinanet_voc/retinanet_r50_fpn_2x_voc.py'
-teacher_cfg = 'configs/retinanet_voc/retinanet_x101_64x4d_fpn_1x_voc.py'
-
-# ===================
-batch_size = 4
-optimizer = dict( lr=0.01 / (16/batch_size))
-optimizer_config = dict(_delete_=True,grad_clip=dict(max_norm=35, norm_type=2))
 
 train_pipeline = [
-    dict(type='LoadImageFromFile',adv_img='/home/jwl/project/mmdetection_voc/workspace/out/'),
+    dict(type='LoadImageFromFile',adv_img='data/adv_voc_15_5/'),
     dict(type='LoadAnnotations', with_bbox=True),
     dict(type='Resize', img_scale=(1000, 600), keep_ratio=True),
     dict(type='RandomFlip', flip_ratio=0.0),
@@ -153,9 +153,6 @@ train_pipeline = [
 
 
 data = dict(
-    samples_per_gpu=batch_size,
     train=dict(
         pipeline=train_pipeline),
 )
-evaluation = dict(interval=24)
-checkpoint_config= dict(interval=1,max_keep_ckpts=1)
