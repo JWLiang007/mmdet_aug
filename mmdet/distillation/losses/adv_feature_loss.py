@@ -63,6 +63,9 @@ class AdvFeatureLoss(nn.Module):
         if self.loss_type == 'mse':
             loss_mse = nn.MSELoss(reduction='sum')
             loss = loss_mse(preds_S, preds_T)/N
+        elif self.loss_type == 'l1':
+            loss_mse = nn.L1Loss(reduction='sum')
+            loss = loss_mse(preds_S, preds_T)/N
         elif self.loss_type == 'cwd':
             assert 'tau' in self.loss_param.keys()
             tau = self.loss_param['tau']
