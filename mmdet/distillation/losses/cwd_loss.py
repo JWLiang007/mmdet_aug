@@ -46,12 +46,18 @@ class CWDLoss(nn.Module):
         if self.align is not None:
             preds_S = self.align(preds_S)
 
-        softmax_pred_T = F.softmax(preds_T.view(-1,W*H)/self.tau, dim=1)
-        softmax_pred_S = F.softmax(preds_S.view(-1,W*H)/self.tau, dim=1)
-        
+        softmax_pred_T = F.softmax(preds_T.view(-1, W * H) / self.tau, dim=1)
+
         logsoftmax = torch.nn.LogSoftmax(dim=1)
-        loss = torch.sum( - softmax_pred_T * logsoftmax(preds_S.view(-1,W*H)/self.tau)) * (self.tau ** 2)
-        return self.loss_weight * loss / (C * N)
+        loss = torch.sum(softmax_pred_T *
+                         logsoftmax(preds_T.view(-1, W * H) / self.tau) -
+                         softmax_pred_T *
+                         logsoftmax(preds_S.view(-1, W * H) / self.tau)) * (
+                             self.tau**2)
+
+        loss = self.loss_weight * loss / (C * N)
+
+        return loss
 
 
 

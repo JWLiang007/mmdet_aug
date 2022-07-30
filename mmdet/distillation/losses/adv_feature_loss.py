@@ -20,21 +20,27 @@ class AdvFeatureLoss(nn.Module):
                  teacher_channels,
                  name,
                  alpha_adv,
-                 layer_idx
+                 layer_idx,
+                 loss_type = 'mse',
+                 **kwargs
                  ):
         super(AdvFeatureLoss, self).__init__()
         self.name = name
         self.layer_idx = layer_idx
         self.alpha_adv = alpha_adv
+        self.loss_type = loss_type
+        self.loss_param = kwargs
         if student_channels != teacher_channels:
             self.align = nn.Conv2d(student_channels, teacher_channels, kernel_size=1, stride=1, padding=0)
         else:
             self.align = None
 
 
+
     def forward(self,
                 feat_s,
-                feat_t):
+                feat_t,
+                **kwargs):
         """Forward function.
         Args:
             preds_S(Tensor): Bs*C*H*W, student's feature map
@@ -47,14 +53,30 @@ class AdvFeatureLoss(nn.Module):
         if self.align is not None:
             preds_S = self.align(preds_S)
     
-        loss = self.get_dis_loss(preds_S, preds_T)*self.alpha_adv
+        loss = self.get_dis_loss(preds_S, preds_T,**kwargs)*self.alpha_adv
             
         return loss
 
-    def get_dis_loss(self, preds_S, preds_T):
-        loss_mse = nn.MSELoss(reduction='sum')
+    def get_dis_loss(self, preds_S, preds_T,**kwargs):
+
         N, C, H, W = preds_T.shape
+        if self.loss_type == 'mse':
+            loss_mse = nn.MSELoss(reduction='sum')
+            loss = loss_mse(preds_S, preds_T)/N
+        elif self.loss_type == 'l1':
+            loss_mse = nn.L1Loss(reduction='sum')
+            loss = loss_mse(preds_S, preds_T)/N
+        elif self.loss_type == 'cwd':
+            assert 'tau' in self.loss_param.keys()
+            tau = self.loss_param['tau']
+            softmax_pred_T = F.softmax(preds_T.view(-1, W * H) / tau, dim=1)
 
-        dis_loss = loss_mse(preds_S, preds_T)/N
+            logsoftmax = torch.nn.LogSoftmax(dim=1)
+            loss = torch.sum(softmax_pred_T *
+                             logsoftmax(preds_T.view(-1, W * H) / tau) -
+                             softmax_pred_T *
+                             logsoftmax(preds_S.view(-1, W * H) / tau)) * (
+                                 tau**2)
 
-        return dis_loss
+            loss =  loss / (C * N)
+        return loss
