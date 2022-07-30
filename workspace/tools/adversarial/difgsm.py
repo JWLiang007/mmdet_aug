@@ -107,6 +107,19 @@ class DIFGSM(Attack):
 
             adv_images = adv_images.detach() - alpha * grad.sign()
             delta = torch.clamp(adv_images - images, min=-eps, max=eps)
+            # delta_min = torch.min(delta)
+            # if high_pass :
+            #     img_fft2 = torch.fft.fft2(delta-delta_min, dim=(2, 3))
+            #     img_fft2s = torch.fft.fftshift(img_fft2,dim=(2,3))
+            #     width,height  = img_fft2s.shape[2:4]
+            #     xs, ys = int(width * (1 - filter_size) / 2), int(height * (1 - filter_size) / 2)
+            #     xe, ye = int(width * (1 + filter_size) / 2), int(height * (1 + filter_size) / 2)
+            #     img_fft2s[:,:, xs:xe, ys:ye] = 0
+            #     img_ifft2s = torch.fft.ifftshift(img_fft2s,dim=(2,3))
+            #     img_ifft = torch.fft.ifft2(img_ifft2s, dim=(2, 3))
+            #     delta = torch.clamp(torch.abs(img_ifft)+delta_min,-eps,eps)
+            #
+
             for chn in range(adv_images.shape[1]):
                 adv_images[:,chn:chn+1,:,:] = torch.clamp(images[:,chn:chn+1,:,:] + delta[:,chn:chn+1,:,:], min=lb[chn], max=ub[chn]).detach()
 

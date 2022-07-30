@@ -12,22 +12,7 @@ lambda_fgd=0.0000005
 distiller = dict(
     type='FGDDistiller',
     teacher_pretrained = 'checkpoints/cascade_mask_rcnn_x101_12.pth',
-    distill_cfg = [ dict(student_module = 'neck.fpn_convs.4.conv',
-                         teacher_module = 'neck.fpn_convs.4.conv',
-                         output_hook = True,
-                         methods=[dict(type='FGDLoss',
-                                       name='loss_fgd_fpn_4',
-                                       student_channels = 256,
-                                       teacher_channels = 256,
-                                       temp = temp,
-                                       alpha_fgd=alpha_fgd,
-                                       beta_fgd=beta_fgd,
-                                       gamma_fgd=gamma_fgd,
-                                       lambda_fgd=lambda_fgd,
-                                       )
-                                ]
-                        )
-                    ,dict(student_module = 'neck.fpn_convs.3.conv',
+    distill_cfg = [ dict(student_module = 'neck.fpn_convs.3.conv',
                          teacher_module = 'neck.fpn_convs.3.conv',
                          output_hook = True,
                          methods=[dict(type='FGDLoss',
