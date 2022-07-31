@@ -39,6 +39,7 @@ class LoadImageFromFile:
                  color_type='color',
                  channel_order='bgr',
                  adv_img=None,
+                 adp_img=None,
                  file_client_args=dict(backend='disk')):
         self.to_float32 = to_float32
         self.color_type = color_type
@@ -46,6 +47,7 @@ class LoadImageFromFile:
         self.file_client_args = file_client_args.copy()
         self.file_client = None
         self.adv_img = adv_img
+        self.adp_img = adp_img
 
     def __call__(self, results):
         """Call functions to load image and get image meta information.
@@ -87,6 +89,15 @@ class LoadImageFromFile:
             results['adv'] = adv_img
             results['adv_filename'] = adv_file
             results['img_fields'].insert(0,'adv')
+        if self.adp_img is not None :
+            adp_file = osp.join(self.adp_img, results['img_info']['filename'])
+            adp_img_bytes = self.file_client.get(adp_file)
+            adp_img = mmcv.imfrombytes(adp_img_bytes, flag=self.color_type)
+            if self.to_float32:
+                adp_img = adp_img.astype(np.float32)
+            results['adp'] = adp_img
+            results['adp_filename'] = adp_file
+            results['img_fields'].insert(0,'adp')
         return results
 
     def __repr__(self):
