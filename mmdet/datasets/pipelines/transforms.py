@@ -591,8 +591,10 @@ class InstanceAug:
     def __call__(self, results):
         if random.random() > self.prob:
             return results
-        assert 'adv' in results['img_fields']
+        assert 'adv' in results['img_fields'] or 'adp' in results['img_fields']
         adv_img  = results['adv']
+        if 'adp' in results['img_fields']:
+            adv_img = results['adp']
         ori_img = results['img']
         find_s_bbox = False
         for bbox in results['ann_info']['bboxes']:
