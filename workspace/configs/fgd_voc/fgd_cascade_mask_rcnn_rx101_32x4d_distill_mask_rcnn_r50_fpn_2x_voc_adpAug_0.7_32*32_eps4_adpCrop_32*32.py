@@ -4,7 +4,7 @@ _base_ = [
 
 train_pipeline = [
     dict(type='LoadImageFromFile',adv_img='data/adv_voc_4_5'),
-    dict(type='LoadAnnotations', with_bbox=True),
+    dict(type='LoadAnnotations', with_bbox=True,with_mask=True),
     dict(type='InstanceAug',prob=0.7),
     dict(type='Resize', img_scale=(1000, 600), keep_ratio=True),
     dict(type='RandomFlip', flip_ratio=0.0),
@@ -15,7 +15,7 @@ train_pipeline = [
          to_rgb=True),
     dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
-    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels'])
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks']),
 ]
 
 
