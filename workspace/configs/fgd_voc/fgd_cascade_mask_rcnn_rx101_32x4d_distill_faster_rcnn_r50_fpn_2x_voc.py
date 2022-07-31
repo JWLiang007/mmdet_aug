@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/datasets/voc07_inst_cocofmt.py',
+    '../_base_/datasets/voc07_cocofmt.py',
     '../_base_/schedules/schedule_2x.py', '../_base_/default_runtime.py'
 ]
 # model settings
