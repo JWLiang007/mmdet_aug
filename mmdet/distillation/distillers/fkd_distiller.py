@@ -18,6 +18,7 @@ class FKDDistiller(BaseDetector):
                  student_cfg,
                  distill_cfg=None,
                  teacher_pretrained=None,
+                 is_two_stage=False,
                  # init_student=False
                  ):
 
@@ -47,6 +48,7 @@ class FKDDistiller(BaseDetector):
 
         self.distill_losses = nn.ModuleDict()
         self.distill_cfg = distill_cfg
+        self.is_two_stage = is_two_stage
 
         student_modules = dict(self.student.named_modules())
         teacher_modules = dict(self.teacher.named_modules())
@@ -158,7 +160,8 @@ class FKDDistiller(BaseDetector):
                     student_loss[loss_name] = self.distill_losses[loss_name](adv_feat_s,adv_feat_t)
 
                 else:
-                    student_loss[loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat,layer_idx)
+
+                    student_loss[loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat,layer_idx,self.is_two_stage)
 
         
         return student_loss
