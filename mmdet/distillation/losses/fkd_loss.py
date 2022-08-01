@@ -92,6 +92,7 @@ class FKDLoss(nn.Module):
                 preds_S,
                 preds_T,
                 layer_idx,
+                is_two_stage = False,
                 ):
         """Forward function.
         Args:
@@ -152,7 +153,8 @@ class FKDLoss(nn.Module):
 
         c_sum_attention_mask = (c_t_attention_mask + c_s_attention_mask * c_s_ratio) / (1 + c_s_ratio)
         c_sum_attention_mask = c_sum_attention_mask.detach()
-
+        if is_two_stage :
+            c_sum_attention_mask = None
         kd_feat_loss += self.dist2(t_feats, self.adaptation_layers[layer_idx](x), attention_mask=sum_attention_mask,
                               channel_attention_mask=c_sum_attention_mask) * self.beta_fkd
         kd_channel_loss += torch.dist(torch.mean(t_feats, [2, 3]),
@@ -184,7 +186,8 @@ class FKDLoss(nn.Module):
         #   print(diff.size())      batchsize x 1 x W x H,
         #   print(attention_mask.size()) batchsize x 1 x W x H
         diff = diff * attention_mask
-        diff = diff * channel_attention_mask
+        if channel_attention_mask is not None:
+            diff = diff * channel_attention_mask
         diff = torch.sum(diff) ** 0.5
         return diff
 
