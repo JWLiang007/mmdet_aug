@@ -11,7 +11,7 @@ gamma_fgd=0.00005
 lambda_fgd=0.0000005
 distiller = dict(
     type='FGDDistiller',
-    teacher_pretrained = 'https://download.openmmlab.com/mmdetection/v2.0/dcn/cascade_mask_rcnn_x101_32x4d_fpn_dconv_c3-c5_1x_coco/cascade_mask_rcnn_x101_32x4d_fpn_dconv_c3-c5_1x_coco-e75f90c8.pth',
+    teacher_pretrained = 'checkpoints/cascade_mask_rcnn_x101_32x4d_fpn_dconv_c3-c5_1x_coco-e75f90c8.pth',
     distill_cfg = [ dict(student_module = 'neck.fpn_convs.3.conv',
                          teacher_module = 'neck.fpn_convs.3.conv',
                          output_hook = True,

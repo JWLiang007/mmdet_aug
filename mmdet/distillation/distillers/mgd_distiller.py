@@ -128,36 +128,37 @@ class MGDDistiller(BaseDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components(student's losses and distiller's losses).
         """
-
-        student_loss = dict()
-        batch_input_shape = tuple(img[0].size()[-2:])
-        for img_meta in img_metas:
-            img_meta['batch_input_shape'] = batch_input_shape
-        batch_size = img.size()[0]
-        adv_img = None
         if 'adv' in kwargs.keys():
             adv_img = kwargs.pop('adv')
-        cmb_img = torch.concat((img,adv_img),0) if adv_img is not None else img
+            adv_feat_s = self.student.extract_feat(adv_img)
+            with torch.no_grad():
+                self.teacher.eval()
+                adv_feat_t = self.teacher.extract_feat(adv_img)
 
-        stu_feat = self.student.extract_feat(cmb_img)
         with torch.no_grad():
-            fea_t = self.teacher.extract_feat(cmb_img)
+            self.teacher.eval()
+            feat = self.teacher.extract_feat(img)
+
+        student_loss = self.student.forward_train(img, img_metas, **kwargs)
+
 
         buffer_dict = dict(self.named_buffers())
         for item_loc in self.distill_cfg:
+
             student_module = 'student_' + item_loc.student_module.replace('.','_')
             teacher_module = 'teacher_' + item_loc.teacher_module.replace('.','_')
+
             student_feat = buffer_dict[student_module]
             teacher_feat = buffer_dict[teacher_module]
+
             for item_loss in item_loc.methods:
                 loss_name = item_loss.name
                 if str(loss_name).startswith('adv'):
-                    student_loss[loss_name] = self.distill_losses[loss_name](student_feat[batch_size:batch_size*2],teacher_feat[batch_size:batch_size*2])
-                else:
-                    student_loss[loss_name] = self.distill_losses[loss_name](student_feat[0:batch_size], teacher_feat[0:batch_size])
+                    student_loss[loss_name] = self.distill_losses[loss_name](adv_feat_s,adv_feat_t)
 
-        img_feat = tuple(f[0:batch_size] for f in stu_feat)
-        student_loss.update(self.student.bbox_head.forward_train(img_feat, img_metas, **kwargs))
+                else:
+                    student_loss[loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat)
+
 
         return student_loss
     
