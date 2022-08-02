@@ -145,7 +145,7 @@ distiller = dict(
 train_pipeline = [
     dict(type='LoadImageFromFile',adv_img='data/adv_voc_4_5/'),
     dict(type='LoadAnnotations', with_bbox=True),
-    dict(type='InstanceAug',prob=0.5),
+    dict(type='InstanceAug',prob=0.25),
     dict(type='Resize', img_scale=(1000, 600), keep_ratio=True),
     dict(type='RandomFlip', flip_ratio=0.0),
     dict(type='RandomCrop', crop_size=(0.8, 0.8), crop_type='relative_range', adaptive=True, bbox_size=(32, 32)),
