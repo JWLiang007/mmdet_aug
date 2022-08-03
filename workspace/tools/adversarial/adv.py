@@ -11,10 +11,19 @@ import torch
 import torch.distributed as dist
 from .util import get_gt_bboxes_scores_and_labels
 from .difgsm import DIFGSM
+from .tifgsm import  TIFGSM
+from .mifgsm import  MIFGSM
+from .vmifgsm import VMIFGSM
 from mmcv.image import tensor2imgs
 from mmcv.runner import get_dist_info
 
 from mmdet.core import encode_mask_results
+ta_factory = {
+    'difgsm': DIFGSM,
+    'tifgsm': TIFGSM,
+    'mifgsm': MIFGSM,
+    'vmifgsm': VMIFGSM
+}
 
 
 def single_gpu_adv(model,
@@ -25,9 +34,8 @@ def single_gpu_adv(model,
     dataset = data_loader.dataset
     prog_bar = mmcv.ProgressBar(len(dataset))
 
+    attack = ta_factory[args.method](model, args)
     for i, data in enumerate(data_loader):
-
-        attack = DIFGSM(model,eps=args.eps,alpha=args.alpha,steps=args.steps,decay= args.decay,resize_rate=args.resize_rate,diversity_prob=args.diversity_prob,random_start=args.random_start)
 
         adv = attack(data)
 
@@ -80,8 +88,8 @@ def multi_gpu_adv(model, data_loader, args):
     if rank == 0:
         prog_bar = mmcv.ProgressBar(len(dataset))
     time.sleep(2)  # This line can prevent deadlock problem in some cases.
+    attack = ta_factory[args.method](model, args)
     for i, data in enumerate(data_loader):
-        attack = DIFGSM(model,eps=args.eps,alpha=args.alpha,steps=args.steps,decay= args.decay,resize_rate=args.resize_rate,diversity_prob=args.diversity_prob,random_start=args.random_start)
 
         adv = attack(data)
 
