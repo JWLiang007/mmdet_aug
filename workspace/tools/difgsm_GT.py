@@ -231,8 +231,17 @@ def main():
         json_file = osp.join(args.work_dir, f'eval_{timestamp}.json')
 
     # build the dataloader
-    cfg.data.test.pipeline.insert(1,dict(type='LoadAnnotations', with_bbox=True))
-    cfg.data.test.pipeline[-1].transforms[-1]['keys'].extend(['gt_bboxes', 'gt_labels'])
+    for p_cfg in  cfg.data.train.pipeline:
+        if 'type' in p_cfg.keys() :
+            if p_cfg['type'] == 'LoadAnnotations':
+                cfg.data.test.pipeline.insert(1,p_cfg)
+            if p_cfg['type'] == 'Collect':
+                cfg.data.test.pipeline[-1].transforms[-1]['keys'] = p_cfg['keys']
+            if p_cfg['type'] == 'DefaultFormatBundle':
+                cfg.data.test.pipeline[-1].transforms.pop(-2)
+                cfg.data.test.pipeline[-1].transforms.insert(-1, p_cfg)
+    # cfg.data.test.pipeline.insert(1,dict(type='LoadAnnotations', with_bbox=True))
+    # cfg.data.test.pipeline[-1].transforms[-1]['keys'].extend(['gt_bboxes', 'gt_labels'])
     dataset = build_dataset(cfg.data.test)
     data_loader = build_dataloader(dataset, **test_loader_cfg)
 
