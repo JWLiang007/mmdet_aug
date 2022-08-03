@@ -29,14 +29,11 @@ def single_gpu_adv(model,
 
         attack = DIFGSM(model,eps=args.eps,alpha=args.alpha,steps=args.steps,decay= args.decay,resize_rate=args.resize_rate,diversity_prob=args.diversity_prob,random_start=args.random_start)
 
-        adv = attack(data, (data['gt_bboxes'], data['gt_labels']))
+        adv = attack(data)
 
         batch_size = adv.shape[0]
         if args.show_dir:
-            if batch_size == 1 and isinstance(data['img'][0], torch.Tensor):
-                img_tensor = data['img'][0]
-            else:
-                img_tensor = data['img'][0].data[0]
+            img_tensor = data['img'][0].data[0]
             img_metas = data['img_metas'][0].data[0]
             imgs = tensor2imgs(img_tensor.detach().clone(), **img_metas[0]['img_norm_cfg'])
             assert len(imgs) == len(img_metas)
@@ -86,14 +83,11 @@ def multi_gpu_adv(model, data_loader, args):
     for i, data in enumerate(data_loader):
         attack = DIFGSM(model,eps=args.eps,alpha=args.alpha,steps=args.steps,decay= args.decay,resize_rate=args.resize_rate,diversity_prob=args.diversity_prob,random_start=args.random_start)
 
-        adv = attack(data, (data['gt_bboxes'], data['gt_labels']))
+        adv = attack(data)
 
         batch_size = adv.shape[0]
         if args.show_dir:
-            if batch_size == 1 and isinstance(data['img'][0], torch.Tensor):
-                img_tensor = data['img'][0]
-            else:
-                img_tensor = data['img'][0].data[0]
+            img_tensor = data['img'][0].data[0]
             img_metas = data['img_metas'][0].data[0]
             imgs = tensor2imgs(img_tensor.detach().clone(), **img_metas[0]['img_norm_cfg'])
             assert len(imgs) == len(img_metas)

@@ -66,11 +66,11 @@ class DIFGSM(Attack):
 
         return padded if torch.rand(1) < self.diversity_prob else x
 
-    def forward(self, data, gts):
+    def forward(self, data):
         r"""
         Overridden.
         """
-        images = data['img'][0].clone().detach().to(self.device)
+        images = data['img'][0].data[0].clone().detach().to(self.device)
         ub,lb = torch.max(images.view(3,-1),dim=1).values,torch.min(images.view(3,-1),dim=1).values
         eps = self.eps * torch.max(ub - lb )
         alpha = self.alpha * torch.max(ub - lb)
@@ -84,20 +84,24 @@ class DIFGSM(Attack):
             for  chn in range(adv_images.shape[1]):
                 adv_images[:,chn:chn+1,:,:] = torch.clamp(adv_images[:,chn:chn+1,:,:], min=lb[chn], max=ub[chn]).detach()
         new_data = {}
-        new_data['img_metas'] = data['img_metas'][0]
+        new_data['img_metas'] = data['img_metas'][0].data[0]
         for i in range(self.steps):
             adv_images.requires_grad = True
 
             new_data['img'] = self.input_diversity(adv_images)
 
-            losses = self.model(**new_data, return_loss=True,gt_bboxes=gts[0][0],
-                                gt_labels=gts[1][0])
-            # modified
-            losses['loss_cls'] = sum(_loss.mean() for _loss in losses['loss_cls'])
+            if 'gt_masks' in data.keys():
+                losses = self.model(**new_data, return_loss=True,gt_bboxes=data['gt_bboxes'][0].data[0],
+                                gt_labels=data['gt_labels'][0].data[0], gt_masks=  data['gt_masks'][0].data[0])
+                loss_cls = sum(losses[_loss].mean() for _loss in losses.keys() if 'cls' in _loss and isinstance(losses[_loss],torch.Tensor))
+            else:
+                losses = self.model(**new_data, return_loss=True,gt_bboxes=data['gt_bboxes'][0].data[0],
+                                gt_labels=data['gt_labels'][0].data[0])
+                loss_cls = sum(_loss.mean() for _loss in losses['loss_cls'])
 
             self.model.zero_grad()
-            losses['loss_cls'] = losses['loss_cls'] * (-1.0)
-            losses['loss_cls'].backward()
+            loss_cls= loss_cls* (-1.0)
+            loss_cls.backward()
             grad = adv_images.grad.data
 
             grad_norm = torch.norm(nn.Flatten()(grad), p=1, dim=1)
@@ -110,6 +114,6 @@ class DIFGSM(Attack):
             for chn in range(adv_images.shape[1]):
                 adv_images[:,chn:chn+1,:,:] = torch.clamp(images[:,chn:chn+1,:,:] + delta[:,chn:chn+1,:,:], min=lb[chn], max=ub[chn]).detach()
 
-            data['img'][0] = adv_images
+            data['img'][0].data[0] = adv_images
         return adv_images
 
