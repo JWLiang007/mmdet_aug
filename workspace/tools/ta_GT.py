@@ -114,14 +114,20 @@ def parse_args():
 
     # attack argument
 
-
+    parser.add_argument('--method', type=str, default='difgsm', help='attack method')
     parser.add_argument('--eps', type=float, default=15, help='maximum perturbation')
     parser.add_argument('--alpha', type=float, default=4, help='step size')
     parser.add_argument('--steps', type=int, default=5, help='step size')
     parser.add_argument('--decay', type=float, default=1.0, help='momentum factor')
     parser.add_argument('--resize_rate', type=float, default=0.9, help='resize factor used in input diversity')
-    parser.add_argument('--diversity_prob', type=float, default=0.5, help='the probability of applying input diversity')
+    parser.add_argument('--diversity_prob', type=float, default=0.5,
+                        help='the probability of applying input diversity of difgsm/tifgsm')
     parser.add_argument('--random_start', action='store_true', help='using random initialization of delta')
+    parser.add_argument('--kernel_name', type=str, default='gaussian',help='kernel name of tifgsm')
+    parser.add_argument('--len_kernel', type=int, default=15, help='kernel length of tifgsm')
+    parser.add_argument('--nsig', type=int, default=3, help=' radius of gaussian kernel of tisgsm')
+    parser.add_argument('--beta', type=float, default=1.5, help=' the upper bound of neighborhood of vmifgsm')
+    parser.add_argument('--N', type=int, default=20, help=' the number of sampled examples in the neighborhood')
 
 
     args = parser.parse_args()
