@@ -36,6 +36,7 @@ def cal_train_time(log_dicts, args):
 
 
 def plot_curve(log_dicts, args):
+    plt.figure(figsize=(16, 10))
     if args.backend is not None:
         plt.switch_backend(args.backend)
     sns.set_style(args.style)
@@ -45,7 +46,8 @@ def plot_curve(log_dicts, args):
         legend = []
         for json_log in args.json_logs:
             for metric in args.keys:
-                legend.append(f'{json_log}_{metric}')
+                legend.append(f'{metric}')
+                # legend.append(f'{json_log}_{metric}')
     assert len(legend) == (len(args.json_logs) * len(args.keys))
     metrics = args.keys
 
@@ -74,6 +76,8 @@ def plot_curve(log_dicts, args):
                         xs.append(epoch)
                 plt.xlabel('epoch')
                 plt.plot(xs, ys, label=legend[i * num_metrics + j], marker='o')
+                for a, b in zip(xs, ys):
+                    plt.text(a, b, b, ha='center', va='bottom', fontsize=10)
             else:
                 xs = []
                 ys = []
