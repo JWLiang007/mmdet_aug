@@ -598,9 +598,6 @@ class InstanceAug:
         adv_img  = results['adv']
         if 'adp' in results['img_fields']:
             adv_img = results['adp']
-        if self.subst_full:
-            results['img'] = adv_img.copy()
-            return results
         ori_img = results['img']
         find_s_bbox = False
         for bbox in results['ann_info']['bboxes']:
@@ -614,6 +611,9 @@ class InstanceAug:
                 out_img[xs:xs+3,ys:ye,:] = (0,0,255)
                 out_img[xe:xe+3,ys:ye,:] = (0,0,255)
                 find_s_bbox = True
+        if self.subst_full and find_s_bbox:
+            results['img'] = adv_img.copy()
+            return results
         if self.show_dir != None and find_s_bbox:
             out_path = os.path.join(self.show_dir,results['ori_filename'])
             mmcv.imwrite(out_img,out_path)
