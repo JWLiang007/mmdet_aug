@@ -583,10 +583,13 @@ class InstanceAug:
     def __init__(self,
                  size=32*32,
                  prob=0.5,
-                 show_dir = None):
+                 show_dir = None,
+                 subst_full = False
+                 ):
         self.size = size
         self.prob = prob
         self.show_dir = show_dir
+        self.subst_full = subst_full
 
     def __call__(self, results):
         if random.random() > self.prob:
@@ -608,6 +611,9 @@ class InstanceAug:
                 out_img[xs:xs+3,ys:ye,:] = (0,0,255)
                 out_img[xe:xe+3,ys:ye,:] = (0,0,255)
                 find_s_bbox = True
+        if self.subst_full and find_s_bbox:
+            results['img'] = adv_img.copy()
+            return results
         if self.show_dir != None and find_s_bbox:
             out_path = os.path.join(self.show_dir,results['ori_filename'])
             mmcv.imwrite(out_img,out_path)

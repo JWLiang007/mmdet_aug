@@ -2,13 +2,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import numpy as np
+from scipy import stats as st
+
 from .attack import Attack
 
 
-class DIFGSM(Attack):
+class TIFGSM(Attack):
     r"""
-    DI2-FGSM in the paper 'Improving Transferability of Adversarial Examples with Input Diversity'
-    [https://arxiv.org/abs/1803.06978]
+    TIFGSM in the paper 'Evading Defenses to Transferable Adversarial Examples by Translation-Invariant Attacks'
+    [https://arxiv.org/abs/1904.02884]
 
     Distance Measure : Linf
 
@@ -16,25 +19,27 @@ class DIFGSM(Attack):
         model (nn.Module): model to attack.
         eps (float): maximum perturbation. (Default: 8/255)
         alpha (float): step size. (Default: 2/255)
-        decay (float): momentum factor. (Default: 0.0)
         steps (int): number of iterations. (Default: 20)
+        decay (float): momentum factor. (Default: 0.0)
+        kernel_name (str): kernel name. (Default: gaussian)
+        len_kernel (int): kernel length.  (Default: 15, which is the best according to the paper)
+        nsig (int): radius of gaussian kernel. (Default: 3; see Section 3.2.2 in the paper for explanation)
         resize_rate (float): resize factor used in input diversity. (Default: 0.9)
         diversity_prob (float) : the probability of applying input diversity. (Default: 0.5)
         random_start (bool): using random initialization of delta. (Default: False)
 
     Shape:
-        - images: :math:`(N, C, H, W)` where `N = number of batches`, `C = number of channels`,        `H = height` and `W = width`. It must have a range [0, 1].
+        - images: :math:`(N, C, H, W)` where `N = number of batches`, `C = number of channels`, `H = height` and `W = width`. It must have a range [0, 1].
         - labels: :math:`(N)` where each value :math:`y_i` is :math:`0 \leq y_i \leq` `number of labels`.
         - output: :math:`(N, C, H, W)`.
 
     Examples::
-        >>> attack = torchattacks.DIFGSM(model, eps=8/255, alpha=2/255, steps=20, decay=0.0, resize_rate=0.9, diversity_prob=0.5, random_start=False)
+        >>> attack = torchattacks.TIFGSM(model, eps=8/255, alpha=2/255, steps=20, decay=1.0, resize_rate=0.9, diversity_prob=0.7, random_start=False)
         >>> adv_images = attack(images, labels)
 
     """
-
-    def __init__(self, model,args):
-        super().__init__("DIFGSM", model)
+    def __init__(self, model, args):
+        super().__init__("TIFGSM", model)
         self.eps = args.eps
         self.steps = args.steps
         self.decay = args.decay
@@ -42,6 +47,10 @@ class DIFGSM(Attack):
         self.resize_rate = args.resize_rate
         self.diversity_prob = args.diversity_prob
         self.random_start = args.random_start
+        self.kernel_name = args.kernel_name
+        self.len_kernel = args.len_kernel
+        self.nsig = args.nsig
+        self.stacked_kernel = torch.from_numpy(self.kernel_generation())
         self._supported_mode = ['default', 'targeted']
 
 
@@ -55,6 +64,7 @@ class DIFGSM(Attack):
         eps = self.eps * torch.max(ub - lb )
         alpha = self.alpha * torch.max(ub - lb)
         momentum = torch.zeros_like(images).detach().to(self.device)
+        stacked_kernel = self.stacked_kernel.to(self.device)
 
         adv_images = images.clone().detach()
 
@@ -83,32 +93,51 @@ class DIFGSM(Attack):
             loss_cls= loss_cls* (-1.0)
             loss_cls.backward()
             grad = adv_images.grad.data
-
-            grad_norm = torch.norm(nn.Flatten()(grad), p=1, dim=1)
-            grad = grad / grad_norm.view([-1] + [1] * (len(grad.shape) - 1))
+            # depth wise conv2d
+            grad = F.conv2d(grad, stacked_kernel, stride=1, padding='same', groups=3)
+            grad = grad / torch.mean(torch.abs(grad), dim=(1,2,3), keepdim=True)
             grad = grad + momentum * self.decay
             momentum = grad
 
             adv_images = adv_images.detach() - alpha * grad.sign()
             delta = torch.clamp(adv_images - images, min=-eps, max=eps)
-            # delta_min = torch.min(delta)
-            # if high_pass :
-            #     img_fft2 = torch.fft.fft2(delta-delta_min, dim=(2, 3))
-            #     img_fft2s = torch.fft.fftshift(img_fft2,dim=(2,3))
-            #     width,height  = img_fft2s.shape[2:4]
-            #     xs, ys = int(width * (1 - filter_size) / 2), int(height * (1 - filter_size) / 2)
-            #     xe, ye = int(width * (1 + filter_size) / 2), int(height * (1 + filter_size) / 2)
-            #     img_fft2s[:,:, xs:xe, ys:ye] = 0
-            #     img_ifft2s = torch.fft.ifftshift(img_fft2s,dim=(2,3))
-            #     img_ifft = torch.fft.ifft2(img_ifft2s, dim=(2, 3))
-            #     delta = torch.clamp(torch.abs(img_ifft)+delta_min,-eps,eps)
-            #
-
             for chn in range(adv_images.shape[1]):
                 adv_images[:,chn:chn+1,:,:] = torch.clamp(images[:,chn:chn+1,:,:] + delta[:,chn:chn+1,:,:], min=lb[chn], max=ub[chn]).detach()
 
             data['img'][0].data[0] = adv_images
         return adv_images
+
+    def kernel_generation(self):
+        if self.kernel_name == 'gaussian':
+            kernel = self.gkern(self.len_kernel, self.nsig).astype(np.float32)
+        elif self.kernel_name == 'linear':
+            kernel = self.lkern(self.len_kernel).astype(np.float32)
+        elif self.kernel_name == 'uniform':
+            kernel = self.ukern(self.len_kernel).astype(np.float32)
+        else:
+            raise NotImplementedError
+
+        stack_kernel = np.stack([kernel, kernel, kernel])
+        stack_kernel = np.expand_dims(stack_kernel, 1)
+        return stack_kernel
+
+    def gkern(self, kernlen=15, nsig=3):
+        """Returns a 2D Gaussian kernel array."""
+        x = np.linspace(-nsig, nsig, kernlen)
+        kern1d = st.norm.pdf(x)
+        kernel_raw = np.outer(kern1d, kern1d)
+        kernel = kernel_raw / kernel_raw.sum()
+        return kernel
+
+    def ukern(self, kernlen=15):
+        kernel = np.ones((kernlen,kernlen))* 1.0 /(kernlen*kernlen)
+        return kernel
+
+    def lkern(self, kernlen=15):
+        kern1d = 1-np.abs(np.linspace((-kernlen+1)/2, (kernlen-1)/2, kernlen)/(kernlen+1)*2)
+        kernel_raw = np.outer(kern1d, kern1d)
+        kernel = kernel_raw / kernel_raw.sum()
+        return kernel
 
     def input_diversity(self, x):
         img_size = x.shape[-1]

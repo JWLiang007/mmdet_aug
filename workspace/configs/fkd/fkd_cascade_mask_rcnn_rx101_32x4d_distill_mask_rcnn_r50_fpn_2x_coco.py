@@ -4,9 +4,9 @@ _base_ = [
 ]
 # model settings
 find_unused_parameters=True
-alpha_fkd=0.00007
-beta_fkd=0.004
-gamma_fkd=0.00007
+alpha_fkd=0.004
+beta_fkd=0.00007
+gamma_fkd=0.004
 T_fkd=0.1
 distiller = dict(
     type='FKDDistiller',
@@ -68,7 +68,7 @@ distiller = dict(
 
 student_cfg = 'configs/mask_rcnn/mask_rcnn_r50_fpn_2x_coco.py'
 teacher_cfg = 'configs/dcn/cascade_mask_rcnn_x101_32x4d_fpn_dconv_c3-c5_1x_coco.py'
-optimizer = dict(type='SGD', lr=0.0025, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=35, norm_type=2))
 data = dict(
     samples_per_gpu=2,
