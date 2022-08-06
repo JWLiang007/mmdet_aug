@@ -4,7 +4,7 @@ _base_ = [
 ]
 # model settings
 find_unused_parameters=True
-weight=5.0
+weight=1.0
 tau=1.0
 distiller = dict(
     type='CWDDistiller',
