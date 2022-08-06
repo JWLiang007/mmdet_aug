@@ -4,9 +4,9 @@ _base_ = [
 ]
 # model settings
 find_unused_parameters=True
-alpha_fkd=0.00007
-beta_fkd=0.004
-gamma_fkd=0.00007
+alpha_fkd=0.004
+beta_fkd=0.00007
+gamma_fkd=0.004
 T_fkd=0.1
 distiller = dict(
     type='FKDDistiller',
