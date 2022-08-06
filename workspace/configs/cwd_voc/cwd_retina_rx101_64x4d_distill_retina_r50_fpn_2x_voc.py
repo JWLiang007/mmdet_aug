@@ -4,8 +4,8 @@ _base_ = [
 ]
 # model settings
 find_unused_parameters=True
-weight=10.0
-tau=4.0
+weight=5.0
+tau=1.0
 distiller = dict(
     type='CWDDistiller',
     teacher_pretrained = 'checkpoints/retinanet_x101_voc_24.pth',
@@ -71,3 +71,5 @@ teacher_cfg = 'configs/retinanet_voc/retinanet_x101_64x4d_fpn_1x_voc.py'
 # ===================
 auto_scale_lr = dict(enable=True)
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
+data = dict(
+    samples_per_gpu=4,)

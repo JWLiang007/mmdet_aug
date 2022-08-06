@@ -4,8 +4,8 @@ _base_ = [
 ]
 # model settings
 find_unused_parameters=True
-weight=10.0
-tau=4.0
+weight=20.0
+tau=1.0
 distiller = dict(
     type='CWDDistiller',
     teacher_pretrained = 'checkpoints/retinanet_x101_voc_24.pth',
