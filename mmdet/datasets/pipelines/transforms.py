@@ -584,12 +584,14 @@ class InstanceAug:
                  size=32*32,
                  prob=0.5,
                  show_dir = None,
-                 subst_full = False
+                 subst_full = False,
+                 subst_stg = '1'
                  ):
         self.size = size
         self.prob = prob
         self.show_dir = show_dir
         self.subst_full = subst_full
+        self.subst_stg = subst_stg
 
     def __call__(self, results):
         if random.random() > self.prob:
@@ -600,6 +602,7 @@ class InstanceAug:
             adv_img = results['adp']
         ori_img = results['img']
         find_s_bbox = False
+        all_s_bbox = True
         for bbox in results['ann_info']['bboxes']:
             ys,xs,ye,xe  = bbox.astype(int)
             bbox_size = (xe - xs)*(ye - ys)
@@ -611,7 +614,9 @@ class InstanceAug:
                 out_img[xs:xs+3,ys:ye,:] = (0,0,255)
                 out_img[xe:xe+3,ys:ye,:] = (0,0,255)
                 find_s_bbox = True
-        if self.subst_full and find_s_bbox:
+            else:
+                all_s_bbox = False
+        if self.subst_full and ( (find_s_bbox and self.subst_stg=='1') or  (all_s_bbox and self.subst_stg=='2')  ):
             results['img'] = adv_img.copy()
             return results
         if self.show_dir != None and find_s_bbox:
