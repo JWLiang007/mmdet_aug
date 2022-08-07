@@ -601,6 +601,7 @@ class InstanceAug:
         if 'adp' in results['img_fields']:
             adv_img = results['adp']
         ori_img = results['img']
+        ori_img_copy = ori_img.copy()
         find_s_bbox = False
         all_s_bbox = True
         for bbox in results['ann_info']['bboxes']:
@@ -619,6 +620,8 @@ class InstanceAug:
         if self.subst_full and ( (find_s_bbox and self.subst_stg=='1') or  (all_s_bbox and self.subst_stg=='2')  ):
             results['img'] = adv_img.copy()
             return results
+        if not all_s_bbox and self.subst_stg=='2' :
+            results['img'] = ori_img_copy
         if self.show_dir != None and find_s_bbox:
             out_path = os.path.join(self.show_dir,results['ori_filename'])
             mmcv.imwrite(out_img,out_path)
@@ -817,7 +820,8 @@ class RandomCrop:
                  recompute_bbox=False,
                  bbox_clip_border=True,
                  adaptive = False,
-                 bbox_size = (32,32)):
+                 bbox_size = (32,32),
+                 subst_stg = '1'):
         if crop_type not in [
                 'relative_range', 'relative', 'absolute', 'absolute_range'
         ]:
@@ -845,6 +849,7 @@ class RandomCrop:
         self.adaptive = adaptive
         assert len(bbox_size) == 2
         self.bbox_size = bbox_size[0] * bbox_size[1]
+        self.subst_stg = subst_stg
 
     def _crop_data(self, results, crop_size, allow_negative_crop):
         """Function to randomly crop images, bounding boxes, masks, semantic
@@ -956,13 +961,16 @@ class RandomCrop:
         """
 
         if self.adaptive:
-            _crop = True
+            find_s_bbox = False
+            all_s_bbox = True
+
             for bbox in results['ann_info']['bboxes']:
                 aera = ( bbox[2] - bbox[0] ) * ( bbox[3] - bbox[1] )
                 if aera < self.bbox_size:
-                    _crop = False
-                    break
-            if not _crop:
+                    find_s_bbox = True
+                else:
+                    all_s_bbox = False
+            if (self.subst_stg == '1' and find_s_bbox) or (self.subst_stg == '2' and all_s_bbox):
                 return results
         image_size = results['img'].shape[:2]
         crop_size = self._get_crop_size(image_size)
