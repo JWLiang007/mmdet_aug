@@ -462,6 +462,11 @@ class RandomFlip:
             cur_dir = np.random.choice(direction_list, p=flip_ratio_list)
 
             results['flip'] = cur_dir is not None
+            if 'flip_flag' in results:
+                assert isinstance(results['flip_flag'], bool) and results['flip_flag']==False
+                results['flip'] = results['flip_flag']
+                cur_dir = None
+
         if 'flip_direction' not in results:
             results['flip_direction'] = cur_dir
         if results['flip']:
@@ -821,7 +826,8 @@ class RandomCrop:
                  bbox_clip_border=True,
                  adaptive = False,
                  bbox_size = (32,32),
-                 subst_stg = '1'):
+                 subst_stg = '1',
+                 flip_stg='0'): # 1:(1+flip) 2:(2+flip)
         if crop_type not in [
                 'relative_range', 'relative', 'absolute', 'absolute_range'
         ]:
@@ -850,6 +856,7 @@ class RandomCrop:
         assert len(bbox_size) == 2
         self.bbox_size = bbox_size[0] * bbox_size[1]
         self.subst_stg = subst_stg
+        self.flip_stg = flip_stg
 
     def _crop_data(self, results, crop_size, allow_negative_crop):
         """Function to randomly crop images, bounding boxes, masks, semantic
@@ -971,10 +978,14 @@ class RandomCrop:
                 else:
                     all_s_bbox = False
             if (self.subst_stg == '1' and find_s_bbox) or (self.subst_stg == '2' and all_s_bbox):
+                if self.flip_stg == '2':
+                    results['flip_flag'] = False
                 return results
         image_size = results['img'].shape[:2]
         crop_size = self._get_crop_size(image_size)
         results = self._crop_data(results, crop_size, self.allow_negative_crop)
+        if self.flip_stg == '1':
+            results['flip_flag'] = False
         return results
 
     def __repr__(self):
