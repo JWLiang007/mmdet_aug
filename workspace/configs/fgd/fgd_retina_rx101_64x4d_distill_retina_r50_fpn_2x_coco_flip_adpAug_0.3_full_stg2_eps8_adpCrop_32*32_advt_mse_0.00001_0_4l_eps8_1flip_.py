@@ -145,7 +145,7 @@ img_norm_cfg = dict(
 train_pipeline = [
     dict(type='LoadImageFromFile',adv_img='data/adv_coco_8_5/'),
     dict(type='LoadAnnotations', with_bbox=True),
-    dict(type='InstanceAug',prob=0.3,subst_full=True,subst_stg='2'),
+    dict(type='InstanceAug',prob=0.3,subst_full=True,subst_stg='2',flip_stg='1'),
     dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
     dict(type='RandomCrop', crop_size=(0.8, 0.8), crop_type='relative_range', adaptive=True, bbox_size=(32, 32),
          subst_stg='2',flip_stg='1'),
