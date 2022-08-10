@@ -9,7 +9,7 @@ beta_fgd=0.000025
 gamma_fgd=0.00005
 lambda_fgd=0.0000005
 # adv loss settings
-alpha_adv=0.00001
+alpha_adv=0.0000005
 loss_type='mse'
 
 distiller = dict(
