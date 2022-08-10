@@ -6,7 +6,7 @@ find_unused_parameters=True
 alpha_mgd=0.0000005
 lambda_mgd=0.45
 # adv loss settings
-alpha_adv=0.00001
+alpha_adv=0.0000005
 loss_type='mse'
 
 distiller = dict(
