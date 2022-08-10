@@ -590,13 +590,15 @@ class InstanceAug:
                  prob=0.5,
                  show_dir = None,
                  subst_full = False,
-                 subst_stg = '1'
+                 subst_stg = '1',
+                 flip_stg = '0',
                  ):
         self.size = size
         self.prob = prob
         self.show_dir = show_dir
         self.subst_full = subst_full
         self.subst_stg = subst_stg
+        self.flip_stg = flip_stg
 
     def __call__(self, results):
         if random.random() > self.prob:
@@ -627,6 +629,8 @@ class InstanceAug:
             return results
         if not all_s_bbox and self.subst_stg=='2' :
             results['img'] = ori_img_copy
+        if (not find_s_bbox or not all_s_bbox ) and self.flip_stg == '1':
+            results['flip_flag'] = False
         if self.show_dir != None and find_s_bbox:
             out_path = os.path.join(self.show_dir,results['ori_filename'])
             mmcv.imwrite(out_img,out_path)
@@ -984,8 +988,8 @@ class RandomCrop:
         image_size = results['img'].shape[:2]
         crop_size = self._get_crop_size(image_size)
         results = self._crop_data(results, crop_size, self.allow_negative_crop)
-        if self.flip_stg == '1':
-            results['flip_flag'] = False
+        # if self.flip_stg == '1':
+        #     results['flip_flag'] = False
         return results
 
     def __repr__(self):
