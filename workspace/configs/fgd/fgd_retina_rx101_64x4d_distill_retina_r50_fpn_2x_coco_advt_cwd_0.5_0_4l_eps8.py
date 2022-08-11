@@ -9,7 +9,7 @@ beta_fgd=0.0005
 gamma_fgd=0.0005
 lambda_fgd=0.000005
 # adv loss settings
-alpha_adv=1.0
+alpha_adv=0.5
 loss_type='cwd'
 tau=1.0
 
