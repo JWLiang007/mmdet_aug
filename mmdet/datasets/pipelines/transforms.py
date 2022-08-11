@@ -462,6 +462,11 @@ class RandomFlip:
             cur_dir = np.random.choice(direction_list, p=flip_ratio_list)
 
             results['flip'] = cur_dir is not None
+            if 'flip_flag' in results:
+                assert isinstance(results['flip_flag'], bool) and results['flip_flag']==False
+                results['flip'] = results['flip_flag']
+                cur_dir = None
+
         if 'flip_direction' not in results:
             results['flip_direction'] = cur_dir
         if results['flip']:
@@ -584,12 +589,16 @@ class InstanceAug:
                  size=32*32,
                  prob=0.5,
                  show_dir = None,
-                 subst_full = False
+                 subst_full = False,
+                 subst_stg = '1',
+                 flip_stg = '0',
                  ):
         self.size = size
         self.prob = prob
         self.show_dir = show_dir
         self.subst_full = subst_full
+        self.subst_stg = subst_stg
+        self.flip_stg = flip_stg
 
     def __call__(self, results):
         if random.random() > self.prob:
@@ -599,7 +608,9 @@ class InstanceAug:
         if 'adp' in results['img_fields']:
             adv_img = results['adp']
         ori_img = results['img']
+        ori_img_copy = ori_img.copy()
         find_s_bbox = False
+        all_s_bbox = True
         for bbox in results['ann_info']['bboxes']:
             ys,xs,ye,xe  = bbox.astype(int)
             bbox_size = (xe - xs)*(ye - ys)
@@ -611,9 +622,15 @@ class InstanceAug:
                 out_img[xs:xs+3,ys:ye,:] = (0,0,255)
                 out_img[xe:xe+3,ys:ye,:] = (0,0,255)
                 find_s_bbox = True
-        if self.subst_full and find_s_bbox:
+            else:
+                all_s_bbox = False
+        if self.subst_full and ( (find_s_bbox and self.subst_stg=='1') or  (all_s_bbox and self.subst_stg=='2')  ):
             results['img'] = adv_img.copy()
             return results
+        if not all_s_bbox and self.subst_stg=='2' :
+            results['img'] = ori_img_copy
+        if (not find_s_bbox or not all_s_bbox ) and self.flip_stg == '1':
+            results['flip_flag'] = False
         if self.show_dir != None and find_s_bbox:
             out_path = os.path.join(self.show_dir,results['ori_filename'])
             mmcv.imwrite(out_img,out_path)
@@ -812,7 +829,9 @@ class RandomCrop:
                  recompute_bbox=False,
                  bbox_clip_border=True,
                  adaptive = False,
-                 bbox_size = (32,32)):
+                 bbox_size = (32,32),
+                 subst_stg = '1',
+                 flip_stg='0'): # 1:(1+flip) 2:(2+flip)
         if crop_type not in [
                 'relative_range', 'relative', 'absolute', 'absolute_range'
         ]:
@@ -840,6 +859,8 @@ class RandomCrop:
         self.adaptive = adaptive
         assert len(bbox_size) == 2
         self.bbox_size = bbox_size[0] * bbox_size[1]
+        self.subst_stg = subst_stg
+        self.flip_stg = flip_stg
 
     def _crop_data(self, results, crop_size, allow_negative_crop):
         """Function to randomly crop images, bounding boxes, masks, semantic
@@ -951,17 +972,24 @@ class RandomCrop:
         """
 
         if self.adaptive:
-            _crop = True
+            find_s_bbox = False
+            all_s_bbox = True
+
             for bbox in results['ann_info']['bboxes']:
                 aera = ( bbox[2] - bbox[0] ) * ( bbox[3] - bbox[1] )
                 if aera < self.bbox_size:
-                    _crop = False
-                    break
-            if not _crop:
+                    find_s_bbox = True
+                else:
+                    all_s_bbox = False
+            if (self.subst_stg == '1' and find_s_bbox) or (self.subst_stg == '2' and all_s_bbox):
+                if self.flip_stg == '2':
+                    results['flip_flag'] = False
                 return results
         image_size = results['img'].shape[:2]
         crop_size = self._get_crop_size(image_size)
         results = self._crop_data(results, crop_size, self.allow_negative_crop)
+        # if self.flip_stg == '1':
+        #     results['flip_flag'] = False
         return results
 
     def __repr__(self):
