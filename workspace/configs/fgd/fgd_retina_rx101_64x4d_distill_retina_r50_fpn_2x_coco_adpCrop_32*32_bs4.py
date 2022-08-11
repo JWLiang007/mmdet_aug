@@ -15,9 +15,9 @@ train_pipeline = [
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
 ]
 
-optimizer = dict(lr=0.04)
+optimizer = dict(lr=0.02)
 data = dict(
-    samples_per_gpu=8,
+    samples_per_gpu=4,
     train=dict(
         pipeline=train_pipeline),
 )
