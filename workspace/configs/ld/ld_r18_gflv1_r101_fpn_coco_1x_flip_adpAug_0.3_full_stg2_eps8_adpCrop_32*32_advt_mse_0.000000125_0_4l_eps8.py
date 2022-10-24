@@ -20,7 +20,7 @@ model = dict(
                            student_channels=256,
                            teacher_channels=256,
                            alpha_adv=alpha_adv,
-                           layer_idx=0,
+                           layer_idx=4,
                            loss_type=loss_type,
                            )
                       ]
@@ -33,7 +33,7 @@ model = dict(
                            student_channels=256,
                            teacher_channels=256,
                            alpha_adv=alpha_adv,
-                           layer_idx=0,
+                           layer_idx=3,
                            loss_type=loss_type,
                            )
                       ]
@@ -46,7 +46,7 @@ model = dict(
                            student_channels=256,
                            teacher_channels=256,
                            alpha_adv=alpha_adv,
-                           layer_idx=0,
+                           layer_idx=2,
                            loss_type=loss_type,
                            )]
              ),
@@ -58,7 +58,7 @@ model = dict(
                            student_channels=256,
                            teacher_channels=256,
                            alpha_adv=alpha_adv,
-                           layer_idx=0,
+                           layer_idx=1,
                            loss_type=loss_type,
                            )
                       ]
