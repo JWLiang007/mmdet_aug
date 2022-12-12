@@ -27,6 +27,9 @@ def parse_args():
         description='MMDet test (and eval) a model')
     parser.add_argument('config', help='test config file path')
     parser.add_argument('checkpoint', help='checkpoint file')
+    parser.add_argument('--plot_tsne', action='store_true',help='plot psne gragh')
+    parser.add_argument('--tsne_save_path', type=str,default='tsne_res.png',help='path to save tsne graph')
+    parser.add_argument('--tsne_cls', type=int,nargs='+',default=None,help='class for tsne graph')
     parser.add_argument(
         '--work-dir',
         help='the directory to save the file containing evaluation metrics')
@@ -245,7 +248,7 @@ def main():
     if not distributed:
         model = build_dp(model, cfg.device, device_ids=cfg.gpu_ids)
         outputs = single_gpu_test(model, data_loader, args.show, args.show_dir,
-                                  args.show_score_thr)
+                                  args.show_score_thr,args)
     else:
         model = build_ddp(
             model,
