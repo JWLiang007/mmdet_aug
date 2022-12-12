@@ -8,7 +8,7 @@ weight=5.0
 tau=1.0
 distiller = dict(
     type='CWDDistiller',
-    teacher_pretrained = 'checkpoints/retinanet_x101_voc_24.pth',
+    teacher_pretrained = 'work_dirs/cascade_rcnn_x101_64x4d_fpn_1x_voc/latest.pth',
     distill_cfg = [ dict(student_module = 'neck.fpn_convs.3.conv',
                          teacher_module = 'neck.fpn_convs.3.conv',
                          output_hook = True,
@@ -65,12 +65,12 @@ distiller = dict(
                    ]
     )
 
-student_cfg = 'configs/retinanet_voc/retinanet_r50_fpn_2x_voc.py'
-teacher_cfg = 'configs/retinanet_voc/retinanet_x101_64x4d_fpn_1x_voc.py'
+student_cfg = 'configs/faster_rcnn_voc/faster_rcnn_r50_fpn_2x_voc.py'
+teacher_cfg = 'configs/cascade_rcnn_voc/cascade_rcnn_x101_64x4d_fpn_1x_voc.py'
 
 # ===================
 auto_scale_lr = dict(enable=True)
 optimizer_config = dict(_delete_=True,grad_clip=dict(max_norm=35, norm_type=2))
-optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 data = dict(
     samples_per_gpu=2,)

@@ -1,10 +1,10 @@
 _base_ = [
-    '../_base_/models/cascade_mask_rcnn_r50_fpn.py',
-    '../_base_/datasets/voc07_inst_cocofmt.py',
+    '../_base_/models/cascade_rcnn_r50_fpn.py',
+    '../_base_/datasets/voc07_cocofmt.py',
     '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py'
 ]
 
-# ======================
+
 model = dict(
     roi_head = dict(
         bbox_head=[
@@ -58,10 +58,7 @@ model = dict(
                     use_sigmoid=False,
                     loss_weight=1.0),
                 loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=1.0))
-        ],
-        mask_head=dict(
-            num_classes=20)
-    )
+        ]),
 )
 
 auto_scale_lr = dict(enable=True)

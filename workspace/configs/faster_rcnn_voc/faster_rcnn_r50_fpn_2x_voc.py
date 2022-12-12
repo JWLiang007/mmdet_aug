@@ -14,7 +14,7 @@ model = dict(
 )
 
 auto_scale_lr = dict(enable=True)
-batch_size = 4
+batch_size = 2
 data = dict(
     samples_per_gpu=batch_size,
 )

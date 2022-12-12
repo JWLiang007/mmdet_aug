@@ -5,9 +5,12 @@ runner = dict(type='EpochBasedRunner', max_epochs=24)
 
 
 # =====
+data_root = 'data/VOCdevkit/'
 optimizer_config = dict(_delete_=True,grad_clip=dict(max_norm=35, norm_type=2))
 batch_size = 2
 data = dict(
     samples_per_gpu=batch_size,
+    train=dict(
+        ann_file=data_root +'voc07_trainval_0_7.json',)
 )
 auto_scale_lr = dict(enable=True)
