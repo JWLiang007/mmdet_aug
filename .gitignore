@@ -125,3 +125,4 @@ work_dirs/
 /workspace/checkpoints/
 /workspace/data/
 /workspace/result/
+/workspace/tsne/
