@@ -1,9 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from pathlib import Path
-
+import torch.nn as nn
 import mmcv
 import torch
 from mmcv.runner import load_checkpoint
+
+from mmcv.runner import  load_checkpoint, _load_checkpoint, load_state_dict
+from mmdet.distillation.builder import DISTILLER,build_distill_loss
+from collections import OrderedDict
 
 from .. import build_detector
 from ..builder import DETECTORS
@@ -27,6 +31,7 @@ class KnowledgeDistillationSingleStageDetector(SingleStageDetector):
                  neck,
                  bbox_head,
                  teacher_config,
+                 distill_cfg=None,
                  teacher_ckpt=None,
                  eval_teacher=True,
                  train_cfg=None,
@@ -42,13 +47,44 @@ class KnowledgeDistillationSingleStageDetector(SingleStageDetector):
         if teacher_ckpt is not None:
             load_checkpoint(
                 self.teacher_model, teacher_ckpt, map_location='cpu')
+        if distill_cfg is not None:
+            self.distill_losses = nn.ModuleDict()
+            self.distill_cfg = distill_cfg
 
+            student_modules = dict(self.named_modules())
+            teacher_modules = dict(self.teacher_model.named_modules())
+
+            def regitster_hooks(student_module, teacher_module):
+                def hook_teacher_forward(module, input, output):
+                    self.register_buffer(teacher_module, output)
+
+                def hook_student_forward(module, input, output):
+                    self.register_buffer(student_module, output)
+
+                return hook_teacher_forward, hook_student_forward
+
+            for item_loc in self.distill_cfg:
+
+                student_module = 'student_' + item_loc.student_module.replace('.', '_')
+                teacher_module = 'teacher_' + item_loc.teacher_module.replace('.', '_')
+
+                self.register_buffer(student_module, None)
+                self.register_buffer(teacher_module, None)
+
+                hook_teacher_forward, hook_student_forward = regitster_hooks(student_module, teacher_module)
+                teacher_modules[item_loc.teacher_module].register_forward_hook(hook_teacher_forward)
+                student_modules[item_loc.student_module].register_forward_hook(hook_student_forward)
+
+                for item_loss in item_loc.methods:
+                    loss_name = item_loss.name
+                    self.distill_losses[loss_name] = build_distill_loss(item_loss)
     def forward_train(self,
                       img,
                       img_metas,
                       gt_bboxes,
                       gt_labels,
-                      gt_bboxes_ignore=None):
+                      gt_bboxes_ignore=None,
+                      **kwargs):
         """
         Args:
             img (Tensor): Input images of shape (N, C, H, W).
@@ -66,6 +102,30 @@ class KnowledgeDistillationSingleStageDetector(SingleStageDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components.
         """
+        adv_feature_loss = {}
+        if 'adv' in kwargs.keys():
+            adv_img = kwargs.pop('adv')
+            adv_feat_s = self.extract_feat(adv_img)
+            with torch.no_grad():
+                self.teacher_model.eval()
+                adv_feat_t = self.teacher_model.extract_feat(adv_img)
+            buffer_dict = dict(self.named_buffers())
+            for item_loc in self.distill_cfg:
+
+                student_module = 'student_' + item_loc.student_module.replace('.', '_')
+                teacher_module = 'teacher_' + item_loc.teacher_module.replace('.', '_')
+
+                student_feat = buffer_dict[student_module]
+                teacher_feat = buffer_dict[teacher_module]
+
+                for item_loss in item_loc.methods:
+                    loss_name = item_loss.name
+                    if str(loss_name).startswith('adv'):
+                        adv_feature_loss[loss_name] = self.distill_losses[loss_name](adv_feat_s, adv_feat_t)
+
+                    else:
+                        adv_feature_loss[loss_name] = self.distill_losses[loss_name](student_feat, teacher_feat)
+
         x = self.extract_feat(img)
         with torch.no_grad():
             teacher_x = self.teacher_model.extract_feat(img)
@@ -73,6 +133,8 @@ class KnowledgeDistillationSingleStageDetector(SingleStageDetector):
         losses = self.bbox_head.forward_train(x, out_teacher, img_metas,
                                               gt_bboxes, gt_labels,
                                               gt_bboxes_ignore)
+
+        losses.update(adv_feature_loss)
         return losses
 
     def cuda(self, device=None):
