@@ -14,6 +14,7 @@ from .difgsm import DIFGSM
 from .tifgsm import  TIFGSM
 from .mifgsm import  MIFGSM
 from .vmifgsm import VMIFGSM
+from .bim import BIM
 from mmcv.image import tensor2imgs
 from mmcv.runner import get_dist_info
 
@@ -22,7 +23,8 @@ ta_factory = {
     'difgsm': DIFGSM,
     'tifgsm': TIFGSM,
     'mifgsm': MIFGSM,
-    'vmifgsm': VMIFGSM
+    'vmifgsm': VMIFGSM,
+    'bim':BIM
 }
 
 
