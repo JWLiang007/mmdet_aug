@@ -1,12 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
 
+import mmcv
 import torch
 
 from mmdet.core import bbox2result
 from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import BaseDetector
-
+# from mmdet.utils import draw_feature_map
 
 @DETECTORS.register_module()
 class SingleStageDetector(BaseDetector):
@@ -40,9 +41,12 @@ class SingleStageDetector(BaseDetector):
 
     def extract_feat(self, img):
         """Directly extract features from the backbone+neck."""
+
         x = self.backbone(img)
+        # draw_feature_map(x)
         if self.with_neck:
             x = self.neck(x)
+            # draw_feature_map(x)
         return x
 
     def forward_dummy(self, img):

@@ -1,6 +1,5 @@
 _base_ = [
-    # '../_base_/datasets/coco_detection.py',
-    '../_base_/datasets/voc07_cocofmt.py',
+    '../_base_/datasets/coco_detection.py',
     '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py'
 ]
 
@@ -97,7 +96,7 @@ model = dict(
         num_outs=5),
     bbox_head=dict(
         type='LDHead',
-        num_classes=20,
+        num_classes=80,
         in_channels=256,
         stacked_convs=4,
         feat_channels=256,
@@ -135,7 +134,7 @@ optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
-    dict(type='LoadImageFromFile',adv_img='data/adv_voc_8_5/'),
+    dict(type='LoadImageFromFile', adv_img='data/adv_coco_8_5/'),
     dict(type='LoadAnnotations', with_bbox=True),
     dict(type='InstanceAug', prob=0.3, subst_full=True, subst_stg='2'),
     dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
