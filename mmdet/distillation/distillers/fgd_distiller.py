@@ -217,11 +217,11 @@ class FGDDistiller(BaseDetector):
                 if str(loss_name).startswith("adv") and with_adv:
                     student_loss[loss_name] += self.distill_losses[loss_name](
                         adv_feat_s, adv_feat_t
-                    ).item()
+                    )
                 else:
                     student_loss[loss_name] += self.distill_losses[loss_name](
                         clean_feat_s, clean_feat_t, kwargs["gt_bboxes"], img_metas
-                    ).item()
+                    )
         if with_adv:
             img_metas = img_metas[:len(img_metas)//2]
             for k, v in kwargs.items():
