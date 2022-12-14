@@ -170,7 +170,7 @@ class FGDDistiller(BaseDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components(student's losses and distiller's losses).
         """
-        
+        # self.student.zero_grad()
         with_adv = False
         if "adv" in kwargs.keys():
             with_adv = True
@@ -198,6 +198,8 @@ class FGDDistiller(BaseDetector):
 
             student_feat = self.get_buffer(student_module)
             teacher_feat = self.get_buffer(teacher_module)
+            self.register_buffer(teacher_module,None)
+            self.register_buffer(student_module,None)
             if with_adv:
                 clean_feat_s, adv_feat_s = torch.chunk(student_feat, chunks=2, dim=0)
                 clean_feat_t, adv_feat_t = torch.chunk(teacher_feat, chunks=2, dim=0)
@@ -211,15 +213,15 @@ class FGDDistiller(BaseDetector):
             for item_loss in item_loc.methods:
                 loss_name = item_loss.name
                 if loss_name not in student_loss.keys():
-                    student_loss[loss_name] = 0
+                    student_loss[loss_name] = torch.zeros(1).cuda()
                 if str(loss_name).startswith("adv") and with_adv:
                     student_loss[loss_name] += self.distill_losses[loss_name](
                         adv_feat_s, adv_feat_t
-                    )
+                    ).item()
                 else:
                     student_loss[loss_name] += self.distill_losses[loss_name](
                         clean_feat_s, clean_feat_t, kwargs["gt_bboxes"], img_metas
-                    )
+                    ).item()
         if with_adv:
             img_metas = img_metas[:len(img_metas)//2]
             for k, v in kwargs.items():
@@ -231,7 +233,7 @@ class FGDDistiller(BaseDetector):
             return student_loss
         # clear logit buffer
         for k, v in self.local_buffer.items():
-            self.local_buffer[k].clear()
+            self.local_buffer[k] = []
         self.student.forward_train_step_2(adv_x_s, img_metas, **kwargs)
         with torch.no_grad():
             self.teacher.eval()
@@ -250,7 +252,6 @@ class FGDDistiller(BaseDetector):
             for item_loss in item_loc.methods:
                 loss_name  =  item_loss.name
                 student_loss[loss_name] = self.distill_losses[loss_name](student_logit,teacher_logit,target)
-            
         return student_loss
 
     def simple_test(self, img, img_metas, **kwargs):
