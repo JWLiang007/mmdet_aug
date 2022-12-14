@@ -63,8 +63,8 @@ distiller = dict(
         # ],
         # feature=[
         dict(
-            student_module="neck.fpn_convs.4.conv",
-            teacher_module="neck.fpn_convs.4.conv",
+            student_module="neck.fpn_convs.0.conv",
+            teacher_module="neck.fpn_convs.0.conv",
             output_hook=True,
             local_buffer=False,
             type="feature",
@@ -94,8 +94,8 @@ distiller = dict(
             ],
         ),
         dict(
-            student_module="neck.fpn_convs.3.conv",
-            teacher_module="neck.fpn_convs.3.conv",
+            student_module="neck.fpn_convs.1.conv",
+            teacher_module="neck.fpn_convs.1.conv",
             output_hook=True,
             local_buffer=False,
             type="feature",
@@ -156,8 +156,8 @@ distiller = dict(
             ],
         ),
         dict(
-            student_module="neck.fpn_convs.1.conv",
-            teacher_module="neck.fpn_convs.1.conv",
+            student_module="neck.fpn_convs.3.conv",
+            teacher_module="neck.fpn_convs.3.conv",
             output_hook=True,
             local_buffer=False,
             type="feature",
@@ -187,8 +187,8 @@ distiller = dict(
             ],
         ),
         dict(
-            student_module="neck.fpn_convs.0.conv",
-            teacher_module="neck.fpn_convs.0.conv",
+            student_module="neck.fpn_convs.4.conv",
+            teacher_module="neck.fpn_convs.4.conv",
             output_hook=True,
             local_buffer=False,
             type="feature",
