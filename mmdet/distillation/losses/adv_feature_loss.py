@@ -20,13 +20,13 @@ class AdvFeatureLoss(nn.Module):
                  teacher_channels,
                  name,
                  alpha_adv,
-                 layer_idx,
+                #  layer_idx,
                  loss_type = 'mse',
                  **kwargs
                  ):
         super(AdvFeatureLoss, self).__init__()
         self.name = name
-        self.layer_idx = layer_idx
+        # self.layer_idx = layer_idx
         self.alpha_adv = alpha_adv
         self.loss_type = loss_type
         self.loss_param = kwargs
@@ -46,8 +46,8 @@ class AdvFeatureLoss(nn.Module):
             preds_S(Tensor): Bs*C*H*W, student's feature map
             preds_T(Tensor): Bs*C*H*W, teacher's feature map
         """
-        preds_S = feat_s[self.layer_idx]
-        preds_T = feat_t[self.layer_idx]
+        preds_S = feat_s
+        preds_T = feat_t
         assert preds_S.shape[-2:] == preds_T.shape[-2:]
 
         if self.align is not None:
