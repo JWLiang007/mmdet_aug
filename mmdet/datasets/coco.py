@@ -331,6 +331,29 @@ class CocoDataset(CustomDataset):
             raise TypeError('invalid type of results')
         return result_files
 
+    # convert result to json format and return
+    def result2jsonF(self,results):
+        # result_files = dict()
+        if isinstance(results[0], list):
+            json_results = self._det2json(results)
+            # result_files['bbox'] = f'{outfile_prefix}.bbox.json'
+            # result_files['proposal'] = f'{outfile_prefix}.bbox.json'
+            # mmcv.dump(json_results, result_files['bbox'])
+        elif isinstance(results[0], tuple):
+            json_results = self._segm2json(results)
+            # result_files['bbox'] = f'{outfile_prefix}.bbox.json'
+            # result_files['proposal'] = f'{outfile_prefix}.bbox.json'
+            # result_files['segm'] = f'{outfile_prefix}.segm.json'
+            # mmcv.dump(json_results[0], result_files['bbox'])
+            # mmcv.dump(json_results[1], result_files['segm'])
+        elif isinstance(results[0], np.ndarray):
+            json_results = self._proposal2json(results)
+            # result_files['proposal'] = f'{outfile_prefix}.proposal.json'
+            # mmcv.dump(json_results, result_files['proposal'])
+        else:
+            raise TypeError('invalid type of results')
+        return json_results
+
     def fast_eval_recall(self, results, proposal_nums, iou_thrs, logger=None):
         gt_bboxes = []
         for i in range(len(self.img_ids)):

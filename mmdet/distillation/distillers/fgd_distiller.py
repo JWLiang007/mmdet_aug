@@ -54,6 +54,7 @@ class FGDDistiller(BaseDetector):
         self.distill_losses = nn.ModuleDict()
         self.distill_cfg = distill_cfg
 
+        self.with_logit=False
         self.local_buffer = {}
         """
             register hooks to cache the feature of FPN
@@ -85,7 +86,8 @@ class FGDDistiller(BaseDetector):
             return hook_teacher_forward, hook_student_forward
 
         for item_loc in distill_cfg:
-
+            if item_loc.type=='logit':
+                self.with_logit = True
             student_module = "student_" + item_loc.student_module.replace(".", "_")
             teacher_module = "teacher_" + item_loc.teacher_module.replace(".", "_")
 
@@ -168,7 +170,7 @@ class FGDDistiller(BaseDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components(student's losses and distiller's losses).
         """
-
+        
         with_adv = False
         if "adv" in kwargs.keys():
             with_adv = True
@@ -178,10 +180,10 @@ class FGDDistiller(BaseDetector):
             for k, v in kwargs.items():
                 v.extend(v)
 
-        feat_s = self.student.forward_train_step_1(img, img_metas)
+        self.student.forward_train_step_1(img, img_metas)
         with torch.no_grad():
             self.teacher.eval()
-            feat_t = self.teacher.forward_train_step_1(img, img_metas)
+            self.teacher.forward_train_step_1(img, img_metas)
 
         student_loss = {}
         clean_x_s = []
@@ -225,6 +227,8 @@ class FGDDistiller(BaseDetector):
         student_loss.update(
             self.student.forward_train_step_2(clean_x_s, img_metas, **kwargs)
         )
+        if not self.with_logit:
+            return student_loss
         # clear logit buffer
         for k, v in self.local_buffer.items():
             self.local_buffer[k].clear()
