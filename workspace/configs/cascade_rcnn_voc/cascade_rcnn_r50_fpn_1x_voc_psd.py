@@ -1,7 +1,7 @@
-_base_ = './faster_rcnn_r50_fpn_2x_voc.py'
+_base_ = [
+    './cascade_rcnn_r50_fpn_1x_voc.py',
+]
 
-
-# ======================
 
 data_root = 'data/VOCdevkit/'
 data = dict(
