@@ -40,7 +40,7 @@ class FGDDistiller(BaseDetector):
         )
         self.student.init_weights()
         if init_student:
-            t_checkpoint = _load_checkpoint(teacher_pretrained)
+            t_checkpoint = _load_checkpoint(teacher_pretrained,map_location='cpu')
             all_name = []
             for name, v in t_checkpoint["state_dict"].items():
                 if name.startswith("backbone."):
