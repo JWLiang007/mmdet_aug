@@ -19,8 +19,10 @@ from mmdet.models import build_detector
 from mmdet.utils import (build_ddp, build_dp, compat_cfg, get_device,
                          replace_cfg_vals, setup_multi_processes,
                          update_data_root)
-
-from pth_transfer import change_model
+from utils4test import res2lb
+from utils4test import change_model
+from pycocotools.coco import COCO
+import json
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -108,6 +110,19 @@ def parse_args():
         default='none',
         help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
+    parser.add_argument(
+        '--gen_psd_label',action='store_true',help='test on training set and generate pseudo labels'
+    )
+    parser.add_argument(
+        '--psd_mode',type=str,default='test',help='generate pseudo labels on train/test set'
+    )
+    parser.add_argument(
+        '--score_thr',type=float,default=0.3,help='score threshold for confidence of predicted bounding box'
+    )
+ 
+    parser.add_argument(
+        '--json_name',type=str,default=None,help='json file that stores pseudo labels'
+    )
     args = parser.parse_args()
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
@@ -126,7 +141,7 @@ def main():
     args = parse_args()
 
     assert args.out or args.eval or args.format_only or args.show \
-        or args.show_dir, \
+        or args.show_dir or args.gen_psd_label, \
         ('Please specify at least one operation (save/eval/format/show the '
          'results / save the results) with the argument "--out", "--eval"'
          ', "--format-only", "--show" or "--show-dir"')
@@ -195,6 +210,15 @@ def main():
     else:
         distributed = True
         init_dist(args.launcher, **cfg.dist_params)
+
+    if args.gen_psd_label:
+        if args.psd_mode == 'train':
+            if cfg.data.train.get('ann_file',False):
+                cfg.data.test.ann_file = cfg.data.train.ann_file
+                cfg.data.val.ann_file = cfg.data.train.ann_file
+            elif cfg.data.train.dataset.get('ann_file',False):
+                cfg.data.test.ann_file = cfg.data.train.dataset.ann_file
+                cfg.data.val.ann_file = cfg.data.train.dataset.ann_file
 
     test_dataloader_default_args = dict(
         samples_per_gpu=1, workers_per_gpu=2, dist=distributed, shuffle=False)
@@ -265,6 +289,19 @@ def main():
             print(f'\nwriting results to {args.out}')
             mmcv.dump(outputs, args.out)
         kwargs = {} if args.eval_options is None else args.eval_options
+        if args.gen_psd_label  and cfg.data.test.type=='CocoDataset':
+            result_f = dataset.result2jsonF(outputs)
+            # TODO use offficial transformation
+            test_ann_file = cfg.data.test.ann_file
+            label_json = res2lb(result_f,COCO(test_ann_file),\
+                score_thr=args.score_thr,)
+            # label_json = res2lb(result_f,json.load(open(test_ann_file,'r')),score_thr=args.score_thr,with_score=args.with_score,with_largest=args.with_largest )
+            json_str = json.dumps(label_json)
+
+            label_out = test_ann_file.replace(test_ann_file.split('/')[-1],args.json_name)
+            with open(label_out, 'w') as json_file:
+                json_file.write(json_str)
+            return
         if args.format_only:
             dataset.format_results(outputs, **kwargs)
         if args.eval:
