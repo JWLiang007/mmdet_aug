@@ -252,6 +252,8 @@ class FGDDistiller(BaseDetector):
             for item_loss in item_loc.methods:
                 loss_name  =  item_loss.name
                 student_loss[loss_name] = self.distill_losses[loss_name](student_logit,teacher_logit,target)
+        for k, v in self.local_buffer.items():
+            self.local_buffer[k] = []
         return student_loss
 
     def simple_test(self, img, img_metas, **kwargs):
