@@ -301,7 +301,7 @@ def main():
             label_out = test_ann_file.replace(test_ann_file.split('/')[-1],args.json_name)
             with open(label_out, 'w') as json_file:
                 json_file.write(json_str)
-            return
+            # return
         if args.format_only:
             dataset.format_results(outputs, **kwargs)
         if args.eval:
