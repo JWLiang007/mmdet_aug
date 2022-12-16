@@ -115,6 +115,9 @@ class FGDDistiller(BaseDetector):
                 loss_name = item_loss.name
                 if loss_name in self.distill_losses.keys():
                     continue
+                if hasattr(item_loss,'common_param') and isinstance(item_loss.common_param,dict):
+                    common_param = item_loss.pop('common_param')
+                    item_loss.update(common_param)
                 self.distill_losses[loss_name] = build_distill_loss(item_loss)
 
     def base_parameters(self):
