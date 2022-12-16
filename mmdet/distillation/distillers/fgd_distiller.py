@@ -5,7 +5,7 @@ from mmdet.models import build_detector
 from mmcv.runner import load_checkpoint, _load_checkpoint, load_state_dict
 from ..builder import DISTILLER, build_distill_loss
 from collections import OrderedDict
-
+import torch.nn.functional as F
 
 @DISTILLER.register_module()
 class FGDDistiller(BaseDetector):
@@ -21,6 +21,7 @@ class FGDDistiller(BaseDetector):
         distill_cfg=None,
         teacher_pretrained=None,
         init_student=False,
+        logit_filter='gt'
     ):
 
         super(FGDDistiller, self).__init__()
@@ -51,6 +52,8 @@ class FGDDistiller(BaseDetector):
             state_dict = OrderedDict(all_name)
             load_state_dict(self.student, state_dict)
 
+        assert logit_filter in ['gt','teacher']
+        self.logit_filter = logit_filter
         self.distill_losses = nn.ModuleDict()
         self.distill_cfg = distill_cfg
 
@@ -243,11 +246,21 @@ class FGDDistiller(BaseDetector):
                 continue
             student_module = "student_" + item_loc.student_module.replace(".", "_")
             teacher_module = "teacher_" + item_loc.teacher_module.replace(".", "_")
+            teacher_logit = torch.cat([lgt[0] for lgt in self.local_buffer[teacher_module]])
+            student_logit = torch.cat([lgt[0] for lgt in self.local_buffer[student_module]])
             target = torch.cat([lgt[1] for lgt in self.local_buffer[student_module]])
-            valid_idx = target!=len(self.CLASSES)
-            target = target[valid_idx]
-            student_logit = torch.cat([lgt[0] for lgt in self.local_buffer[student_module]])[valid_idx]
-            teacher_logit = torch.cat([lgt[0] for lgt in self.local_buffer[teacher_module]])[valid_idx]
+            weights = torch.cat([lgt[2] for lgt in self.local_buffer[student_module]])
+            valid_idx = weights!=0
+            if self.logit_filter=='gt':
+                valid_idx =torch.logical_and(valid_idx,target!=len(self.CLASSES))
+                target = target[valid_idx]
+            elif self.logit_filter=='teacher':
+                _teacher_logit = F.softmax(teacher_logit,1)
+                val,idx  = torch.max(_teacher_logit,1)
+                valid_idx = torch.logical_and(valid_idx,val>0.7)
+                target = idx[valid_idx]
+            student_logit = student_logit[valid_idx]
+            teacher_logit = teacher_logit[valid_idx]
             
             for item_loss in item_loc.methods:
                 loss_name  =  item_loss.name
