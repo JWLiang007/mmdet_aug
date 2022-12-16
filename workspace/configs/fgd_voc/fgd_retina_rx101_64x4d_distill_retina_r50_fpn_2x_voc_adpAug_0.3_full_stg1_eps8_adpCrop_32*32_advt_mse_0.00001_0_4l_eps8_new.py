@@ -16,10 +16,9 @@ alpha_dkd = 1.0
 beta_dkd = 0.25
 temp_dkd = 1.0
 
-
-fgd_loss = dict(
-    type="FGDLoss",
-    name="fgd_loss",
+fgd_common_param = dict(
+    # type="FGDLoss",
+    # name="fgd_loss",
     student_channels=256,
     teacher_channels=256,
     temp=temp,
@@ -28,9 +27,10 @@ fgd_loss = dict(
     gamma_fgd=gamma_fgd,
     lambda_fgd=lambda_fgd,
 )
-adv_loss = dict(
-    type="AdvFeatureLoss",
-    name="adv_loss",
+
+adv_common_param = dict(
+    # type="AdvFeatureLoss",
+    # name="adv_loss",
     student_channels=256,
     teacher_channels=256,
     alpha_adv=alpha_adv,
@@ -42,8 +42,6 @@ distiller = dict(
     teacher_pretrained="checkpoints/retinanet_x101_voc_24.pth",
     init_student=True,
     distill_cfg=[
-        # dict(
-        # logit=[
         # dict(
         #     student_module="bbox_head.loss_cls",
         #     teacher_module="bbox_head.loss_cls",
@@ -60,8 +58,6 @@ distiller = dict(
         #         ),
         #     ],
         # ),
-        # ],
-        # feature=[
         dict(
             student_module="neck.fpn_convs.0.conv",
             teacher_module="neck.fpn_convs.0.conv",
@@ -69,28 +65,16 @@ distiller = dict(
             local_buffer=False,
             type="feature",
             methods=[
-                fgd_loss,
-                adv_loss
-                # dict(
-                #     type="FGDLoss",
-                #     name="loss_fgd_fpn_4",
-                #     student_channels=256,
-                #     teacher_channels=256,
-                #     temp=temp,
-                #     alpha_fgd=alpha_fgd,
-                #     beta_fgd=beta_fgd,
-                #     gamma_fgd=gamma_fgd,
-                #     lambda_fgd=lambda_fgd,
-                # ),
-                # dict(
-                #     type="AdvFeatureLoss",
-                #     name="adv_loss_fgd_fpn_4",
-                #     student_channels=256,
-                #     teacher_channels=256,
-                #     alpha_adv=alpha_adv,
-                #     layer_idx=4,
-                #     loss_type=loss_type,
-                # ),
+                dict(
+                    type="FGDLoss",
+                    name="fgd_loss_fpn_0",
+                    common_param=fgd_common_param,
+                ),
+                dict(
+                    type="AdvFeatureLoss",
+                    name="adv_loss_fpn_0",
+                    common_param=adv_common_param,
+                ),
             ],
         ),
         dict(
@@ -100,28 +84,16 @@ distiller = dict(
             local_buffer=False,
             type="feature",
             methods=[
-                fgd_loss,
-                adv_loss
-                # dict(
-                #     type="FGDLoss",
-                #     name="loss_fgd_fpn_3",
-                #     student_channels=256,
-                #     teacher_channels=256,
-                #     temp=temp,
-                #     alpha_fgd=alpha_fgd,
-                #     beta_fgd=beta_fgd,
-                #     gamma_fgd=gamma_fgd,
-                #     lambda_fgd=lambda_fgd,
-                # ),
-                # dict(
-                #     type="AdvFeatureLoss",
-                #     name="adv_loss_fgd_fpn_3",
-                #     student_channels=256,
-                #     teacher_channels=256,
-                #     alpha_adv=alpha_adv,
-                #     layer_idx=3,
-                #     loss_type=loss_type,
-                # ),
+                dict(
+                    type="FGDLoss",
+                    name="fgd_loss_fpn_1",
+                    common_param=fgd_common_param,
+                ),
+                dict(
+                    type="AdvFeatureLoss",
+                    name="adv_loss_fpn_1",
+                    common_param=adv_common_param,
+                ),
             ],
         ),
         dict(
@@ -131,28 +103,16 @@ distiller = dict(
             local_buffer=False,
             type="feature",
             methods=[
-                fgd_loss,
-                adv_loss
-                # dict(
-                #     type="FGDLoss",
-                #     name="loss_fgd_fpn_2",
-                #     student_channels=256,
-                #     teacher_channels=256,
-                #     temp=temp,
-                #     alpha_fgd=alpha_fgd,
-                #     beta_fgd=beta_fgd,
-                #     gamma_fgd=gamma_fgd,
-                #     lambda_fgd=lambda_fgd,
-                # ),
-                # dict(
-                #     type="AdvFeatureLoss",
-                #     name="adv_loss_fgd_fpn_2",
-                #     student_channels=256,
-                #     teacher_channels=256,
-                #     alpha_adv=alpha_adv,
-                #     layer_idx=2,
-                #     loss_type=loss_type,
-                # ),
+                dict(
+                    type="FGDLoss",
+                    name="fgd_loss_fpn_2",
+                    common_param=fgd_common_param,
+                ),
+                dict(
+                    type="AdvFeatureLoss",
+                    name="adv_loss_fpn_2",
+                    common_param=adv_common_param,
+                ),
             ],
         ),
         dict(
@@ -162,28 +122,16 @@ distiller = dict(
             local_buffer=False,
             type="feature",
             methods=[
-                fgd_loss,
-                adv_loss
-                # dict(
-                #     type="FGDLoss",
-                #     name="loss_fgd_fpn_1",
-                #     student_channels=256,
-                #     teacher_channels=256,
-                #     temp=temp,
-                #     alpha_fgd=alpha_fgd,
-                #     beta_fgd=beta_fgd,
-                #     gamma_fgd=gamma_fgd,
-                #     lambda_fgd=lambda_fgd,
-                # ),
-                # dict(
-                #     type="AdvFeatureLoss",
-                #     name="adv_loss_fgd_fpn_1",
-                #     student_channels=256,
-                #     teacher_channels=256,
-                #     alpha_adv=alpha_adv,
-                #     layer_idx=1,
-                #     loss_type=loss_type,
-                # ),
+                dict(
+                    type="FGDLoss",
+                    name="fgd_loss_fpn_3",
+                    common_param=fgd_common_param,
+                ),
+                dict(
+                    type="AdvFeatureLoss",
+                    name="adv_loss_fpn_3",
+                    common_param=adv_common_param,
+                ),
             ],
         ),
         dict(
@@ -193,28 +141,16 @@ distiller = dict(
             local_buffer=False,
             type="feature",
             methods=[
-                fgd_loss,
-                adv_loss
-                # dict(
-                #     type="FGDLoss",
-                #     name="loss_fgd_fpn_0",
-                #     student_channels=256,
-                #     teacher_channels=256,
-                #     temp=temp,
-                #     alpha_fgd=alpha_fgd,
-                #     beta_fgd=beta_fgd,
-                #     gamma_fgd=gamma_fgd,
-                #     lambda_fgd=lambda_fgd,
-                # ),
-                # dict(
-                #     type="AdvFeatureLoss",
-                #     name="adv_loss_fgd_fpn_0",
-                #     student_channels=256,
-                #     teacher_channels=256,
-                #     alpha_adv=alpha_adv,
-                #     layer_idx=0,
-                #     loss_type=loss_type,
-                # ),
+                dict(
+                    type="FGDLoss",
+                    name="fgd_loss_fpn_4",
+                    common_param=fgd_common_param,
+                ),
+                dict(
+                    type="AdvFeatureLoss",
+                    name="adv_loss_fpn_4",
+                    common_param=adv_common_param,
+                ),
             ],
         ),
     ],
