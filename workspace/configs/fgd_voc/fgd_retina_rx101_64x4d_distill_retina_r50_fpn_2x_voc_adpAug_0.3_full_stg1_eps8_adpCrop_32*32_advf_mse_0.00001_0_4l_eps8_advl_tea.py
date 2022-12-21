@@ -16,8 +16,8 @@ alpha_dkd = 1.0
 beta_dkd = 0.25
 temp_dkd = 1.0
 
-fgd_common_param = dict(
-    # type="FGDLoss",
+fgd_param = dict(
+    type="FGDLoss",
     # name="fgd_loss",
     student_channels=256,
     teacher_channels=256,
@@ -28,8 +28,8 @@ fgd_common_param = dict(
     lambda_fgd=lambda_fgd,
 )
 
-adv_common_param = dict(
-    # type="AdvFeatureLoss",
+adv_feat_param = dict(
+    type="AdvFeatureLoss",
     # name="adv_loss",
     student_channels=256,
     teacher_channels=256,
@@ -37,8 +37,8 @@ adv_common_param = dict(
     loss_type=loss_type,
 )
 
-dkd_common_param = dict(
-    # type="DKDLoss",
+adv_dkd_param = dict(
+    type="DKDLoss",
     # name="dkd_loss",
     alpha=alpha_dkd,
     beta=beta_dkd,
@@ -49,114 +49,126 @@ distiller = dict(
     type="FGDDistiller",
     teacher_pretrained="checkpoints/retinanet_x101_voc_24.pth",
     init_student=True,
-    logit_filter="teacher",
+    
     distill_cfg=[
         dict(
             student_module="bbox_head.loss_cls",
             teacher_module="bbox_head.loss_cls",
-            output_hook=False,
-            local_buffer=True,
-            type="logit",
+
             methods=[
                 dict(
-                    type="DKDLoss",
-                    name="dkd_loss",
-                    common_param=dkd_common_param,
+                    name="adv_dkd_loss",
+                    loss_input_type="logit",
+                    hook_type = 'input',
+                    logit_filter="teacher",
+                    img_type = 'adv',
+                    loss_param=adv_dkd_param,
                 ),
             ],
         ),
         dict(
             student_module="neck.fpn_convs.0.conv",
             teacher_module="neck.fpn_convs.0.conv",
-            output_hook=True,
-            local_buffer=False,
-            type="feature",
             methods=[
                 dict(
-                    type="FGDLoss",
                     name="fgd_loss_fpn_0",
-                    common_param=fgd_common_param,
+                    loss_input_type="feature",
+                    hook_type = 'output',
+                    img_type = 'clean',
+                    loss_param=fgd_param,
                 ),
                 dict(
-                    type="AdvFeatureLoss",
                     name="adv_loss_fpn_0",
-                    common_param=adv_common_param,
+                    loss_input_type="feature",
+                    hook_type = 'output',
+                    img_type = 'adv',
+                    loss_param=adv_feat_param,
                 ),
             ],
         ),
         dict(
             student_module="neck.fpn_convs.1.conv",
             teacher_module="neck.fpn_convs.1.conv",
-            output_hook=True,
-            local_buffer=False,
-            type="feature",
             methods=[
                 dict(
-                    type="FGDLoss",
-                    name="fgd_loss_fpn_1",
-                    common_param=fgd_common_param,
+                   name="fgd_loss_fpn_1",
+                    loss_input_type="feature",
+                    hook_type = 'output',
+                    img_type = 'clean',
+                    loss_param=fgd_param,
                 ),
                 dict(
-                    type="AdvFeatureLoss",
+
                     name="adv_loss_fpn_1",
-                    common_param=adv_common_param,
+                    loss_input_type="feature",
+                    hook_type = 'output',
+                    img_type = 'adv',
+                    loss_param=adv_feat_param,
                 ),
             ],
         ),
         dict(
             student_module="neck.fpn_convs.2.conv",
             teacher_module="neck.fpn_convs.2.conv",
-            output_hook=True,
-            local_buffer=False,
-            type="feature",
             methods=[
                 dict(
-                    type="FGDLoss",
                     name="fgd_loss_fpn_2",
-                    common_param=fgd_common_param,
+                    loss_input_type="feature",
+                    hook_type = 'output',
+                    img_type = 'clean',
+                    loss_param=fgd_param,
                 ),
                 dict(
-                    type="AdvFeatureLoss",
+
                     name="adv_loss_fpn_2",
-                    common_param=adv_common_param,
+                    loss_input_type="feature",
+                    hook_type = 'output',
+                    img_type = 'adv',
+                    loss_param=adv_feat_param,
                 ),
             ],
         ),
         dict(
             student_module="neck.fpn_convs.3.conv",
             teacher_module="neck.fpn_convs.3.conv",
-            output_hook=True,
-            local_buffer=False,
-            type="feature",
             methods=[
                 dict(
-                    type="FGDLoss",
                     name="fgd_loss_fpn_3",
-                    common_param=fgd_common_param,
+                    loss_input_type="feature",
+                    hook_type = 'output',
+                    img_type = 'clean',
+                    loss_param=fgd_param,
                 ),
                 dict(
-                    type="AdvFeatureLoss",
+
                     name="adv_loss_fpn_3",
-                    common_param=adv_common_param,
+                    loss_input_type="feature",
+                    hook_type = 'output',
+                    img_type = 'adv',
+                    loss_param=adv_feat_param,
                 ),
             ],
         ),
         dict(
             student_module="neck.fpn_convs.4.conv",
             teacher_module="neck.fpn_convs.4.conv",
-            output_hook=True,
-            local_buffer=False,
-            type="feature",
+
             methods=[
                 dict(
-                    type="FGDLoss",
+
                     name="fgd_loss_fpn_4",
-                    common_param=fgd_common_param,
+                    loss_input_type="feature",
+                    hook_type = 'output',
+                    img_type = 'clean',
+                    loss_param=fgd_param,
                 ),
                 dict(
-                    type="AdvFeatureLoss",
+
                     name="adv_loss_fpn_4",
-                    common_param=adv_common_param,
+                    loss_input_type="feature",
+                    hook_type = 'output',
+                    img_type = 'adv',
+                    loss_param=adv_feat_param,
                 ),
             ],
         ),
