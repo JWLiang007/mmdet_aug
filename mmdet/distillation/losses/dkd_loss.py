@@ -9,7 +9,7 @@ from ..builder import DISTILL_LOSSES
 class DKDLoss(nn.Module):
 
     def __init__(self,
-                 name,
+                #  name,
                 alpha= 1.0, 
                 beta=0.25,
                 temp=1.0

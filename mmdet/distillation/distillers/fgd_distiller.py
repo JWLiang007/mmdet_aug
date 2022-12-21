@@ -5,6 +5,7 @@ from mmdet.models import build_detector
 from mmcv.runner import load_checkpoint, _load_checkpoint, load_state_dict
 from ..builder import DISTILLER, build_distill_loss
 from collections import OrderedDict
+import torch.nn.functional as F
 
 
 @DISTILLER.register_module()
@@ -40,7 +41,8 @@ class FGDDistiller(BaseDetector):
         )
         self.student.init_weights()
         if init_student:
-            t_checkpoint = _load_checkpoint(teacher_pretrained,map_location='cpu')
+            t_checkpoint = _load_checkpoint(
+                teacher_pretrained, map_location="cpu")
             all_name = []
             for name, v in t_checkpoint["state_dict"].items():
                 if name.startswith("backbone."):
@@ -54,7 +56,11 @@ class FGDDistiller(BaseDetector):
         self.distill_losses = nn.ModuleDict()
         self.distill_cfg = distill_cfg
 
-        self.with_logit=False
+        self.img_type = "clean"
+        self.with_clean_logit = False
+        self.with_adv_logit = False
+        self.with_clean_feature = False
+        self.with_adv_feature = False
         self.local_buffer = {}
         """
             register hooks to cache the feature of FPN
@@ -62,61 +68,118 @@ class FGDDistiller(BaseDetector):
         student_modules = dict(self.student.named_modules())
         teacher_modules = dict(self.teacher.named_modules())
 
-        def regitster_feature_hooks(
-            student_module, teacher_module, output_hook=True, local_buffer=False
+        def regitster_hooks(
+            student_module,
+            teacher_module,
+            hook_type="output",
+            img_type="clean",
         ):
+
             def hook_teacher_forward(module, input, output):
-                if output_hook:
-                    self.register_buffer(teacher_module, output)
-                else:
-                    if local_buffer:
-                        self.local_buffer[teacher_module].append(input)
-                    else:
-                        self.register_buffer(teacher_module, input)
+                if img_type == self.img_type:
+                    module_key = teacher_module + "_" + img_type
+                    if module_key not in self.local_buffer.keys():
+                        self.local_buffer[module_key] = []
+                    if hook_type == "input":
+                        self.local_buffer[module_key].append(input)
+                    elif hook_type == "output":
+                        self.local_buffer[module_key].append(output)
 
             def hook_student_forward(module, input, output):
-                if output_hook:
-                    self.register_buffer(student_module, output)
-                else:
-                    if local_buffer:
-                        self.local_buffer[student_module].append(input)
-                    else:
-                        self.register_buffer(student_module, input)
+                if img_type == self.img_type:
+                    module_key = student_module + "_" + img_type
+                    if module_key not in self.local_buffer.keys():
+                        self.local_buffer[module_key] = []
+                    if hook_type == "input":
+                        self.local_buffer[module_key].append(input)
+                    elif hook_type == "output":
+                        self.local_buffer[module_key].append(output)
 
             return hook_teacher_forward, hook_student_forward
 
         for item_loc in distill_cfg:
-            if item_loc.type=='logit':
-                self.with_logit = True
-            student_module = "student_" + item_loc.student_module.replace(".", "_")
-            teacher_module = "teacher_" + item_loc.teacher_module.replace(".", "_")
 
-            if item_loc.local_buffer:
-                self.local_buffer[student_module] = []
-                self.local_buffer[teacher_module] = []
-            # else:
-            #     self.register_buffer(student_module, None)
-            #     self.register_buffer(teacher_module, None)
-
-            hook_teacher_forward, hook_student_forward = regitster_feature_hooks(
-                student_module,
-                teacher_module,
-                item_loc.output_hook,
-                item_loc.local_buffer,
-            )
-            teacher_modules[item_loc.teacher_module].register_forward_hook(
-                hook_teacher_forward
-            )
-            student_modules[item_loc.student_module].register_forward_hook(
-                hook_student_forward
-            )
+            student_module = "student_" + item_loc.student_module.replace(
+                ".", "_")
+            teacher_module = "teacher_" + item_loc.teacher_module.replace(
+                ".", "_")
 
             for item_loss in item_loc.methods:
                 loss_name = item_loss.name
                 if loss_name in self.distill_losses.keys():
                     continue
-                self.distill_losses[loss_name] = build_distill_loss(item_loss)
+                loss_param = item_loss.loss_param
+                self.distill_losses[loss_name] = build_distill_loss(loss_param)
+                self.set_loss_flag(item_loss=item_loss)
+                hook_teacher_forward, hook_student_forward = regitster_hooks(
+                    student_module,
+                    teacher_module,
+                    item_loss.hook_type,
+                    item_loss.img_type,
+                )
+                teacher_modules[item_loc.teacher_module].register_forward_hook(
+                    hook_teacher_forward)
+                student_modules[item_loc.student_module].register_forward_hook(
+                    hook_student_forward)
 
+    def set_loss_flag(self, item_loss):
+        loss_input_type = item_loss.loss_input_type
+        img_type = item_loss.img_type
+        assert loss_input_type in ["logit", "feature"]
+        assert img_type in ["clean", "adv"]
+        if loss_input_type == "logit":
+            if img_type == "clean":
+                self.with_clean_logit = True
+            elif img_type == "adv":
+                self.with_adv_logit = True
+        elif loss_input_type == "feature":
+            if img_type == "clean":
+                self.with_clean_feature = True
+            elif img_type == "adv":
+                self.with_adv_feature = True
+
+    def preprocess_loss_input(
+        self,
+        loss_input_s,
+        loss_input_t,
+        item_loss,
+        img_metas,
+        **kwargs,
+    ):
+        img_type = item_loss.img_type 
+        loss_input_type = item_loss.loss_input_type
+        
+        if loss_input_type == 'feature':
+            if img_type == 'adv':
+                return (loss_input_s[0], loss_input_t[0])
+            elif img_type == 'clean':
+                return (loss_input_s[0], loss_input_t[0], kwargs["gt_bboxes"],
+                        img_metas)
+        elif loss_input_type == 'logit':
+            logit_filter = item_loss.logit_filter
+            assert logit_filter in ['teacher','gt']
+            teacher_logit = torch.cat(
+                [lgt[0] for lgt in loss_input_t])
+            student_logit = torch.cat(
+                [lgt[0] for lgt in loss_input_s])
+            target = torch.cat(
+                [lgt[1] for lgt in loss_input_s])
+            weights = torch.cat(
+                [lgt[2] for lgt in loss_input_s])
+            valid_idx = weights != 0
+            if logit_filter == "gt":
+                valid_idx = torch.logical_and(valid_idx,
+                                              target != len(self.CLASSES))
+                target = target[valid_idx]
+            elif logit_filter == "teacher":
+                _teacher_logit = F.softmax(teacher_logit, 1)
+                val, idx = torch.max(_teacher_logit, 1)
+                valid_idx = torch.logical_and(valid_idx, val > 0.7)
+                target = idx[valid_idx]
+            student_logit = student_logit[valid_idx]
+            teacher_logit = teacher_logit[valid_idx]
+            return (student_logit,teacher_logit,target)
+                
     def base_parameters(self):
         return nn.ModuleList([self.student, self.distill_losses])
 
@@ -128,23 +191,24 @@ class FGDDistiller(BaseDetector):
     @property
     def with_shared_head(self):
         """bool: whether the detector has a shared head in the RoI Head"""
-        return (
-            hasattr(self.student, "roi_head") and self.student.roi_head.with_shared_head
-        )
+        return (hasattr(self.student, "roi_head")
+                and self.student.roi_head.with_shared_head)
 
     @property
     def with_bbox(self):
         """bool: whether the detector has a bbox head"""
-        return (
-            hasattr(self.student, "roi_head") and self.student.roi_head.with_bbox
-        ) or (hasattr(self.student, "bbox_head") and self.student.bbox_head is not None)
+        return (hasattr(self.student, "roi_head")
+                and self.student.roi_head.with_bbox) or (
+                    hasattr(self.student, "bbox_head")
+                    and self.student.bbox_head is not None)
 
     @property
     def with_mask(self):
         """bool: whether the detector has a mask head"""
-        return (
-            hasattr(self.student, "roi_head") and self.student.roi_head.with_mask
-        ) or (hasattr(self.student, "mask_head") and self.student.mask_head is not None)
+        return (hasattr(self.student, "roi_head")
+                and self.student.roi_head.with_mask) or (
+                    hasattr(self.student, "mask_head")
+                    and self.student.mask_head is not None)
 
     def init_weights_teacher(self, path=None):
         """Load the pretrained model in teacher detector.
@@ -156,7 +220,6 @@ class FGDDistiller(BaseDetector):
         checkpoint = load_checkpoint(self.teacher, path, map_location="cpu")
 
     def forward_train(self, img, img_metas, **kwargs):
-
         """
         Args:
             img (Tensor): Input images of shape (N, C, H, W).
@@ -171,88 +234,182 @@ class FGDDistiller(BaseDetector):
             dict[str, Tensor]: A dictionary of loss components(student's losses and distiller's losses).
         """
         # self.student.zero_grad()
-        with_adv = False
+        # with_adv = False
         if "adv" in kwargs.keys():
-            with_adv = True
+            # with_adv = True
             adv_img = kwargs.pop("adv")
-            img = torch.cat((img, adv_img), 0)
-            img_metas = img_metas * 2
-            for k, v in kwargs.items():
-                v.extend(v)
+            # img = torch.cat((img, adv_img), 0)
+            # img_metas = img_metas * 2
+            # for k, v in kwargs.items():
+            #     v.extend(v)
 
-        self.student.forward_train_step_1(img, img_metas)
-        with torch.no_grad():
-            self.teacher.eval()
-            self.teacher.forward_train_step_1(img, img_metas)
-
-        student_loss = {}
-        clean_x_s = []
-        adv_x_t = []
-        adv_x_s = []
-        # buffer_dict = dict(self.named_buffers())
+        self.img_type = "clean"
+        student_loss = self.student.forward_train(img, img_metas, **kwargs)
+        if self.with_clean_logit:
+            with torch.no_grad():
+                self.teacher.forward_train(img, img_metas, **kwargs)
+        elif self.with_clean_feature:
+            with torch.no_grad():
+                self.teacher.forward_train_step_1(img, img_metas)
+        self.img_type = 'adv'
+        if self.with_adv_logit:
+            self.student.forward_train(adv_img, img_metas, **kwargs)
+            with torch.no_grad():
+                self.teacher.forward_train(adv_img, img_metas, **kwargs)
+        elif self.with_clean_feature:
+            self.student.forward_train_step_1(adv_img, img_metas)
+            with torch.no_grad():
+                self.teacher.forward_train_step_1(adv_img, img_metas)
         for item_loc in self.distill_cfg:
-            if item_loc.type != 'feature':
-                continue
-            student_module = "student_" + item_loc.student_module.replace(".", "_")
-            teacher_module = "teacher_" + item_loc.teacher_module.replace(".", "_")
-
-            student_feat = self.get_buffer(student_module)
-            teacher_feat = self.get_buffer(teacher_module)
-            self.register_buffer(teacher_module,None)
-            self.register_buffer(student_module,None)
-            if with_adv:
-                clean_feat_s, adv_feat_s = torch.chunk(student_feat, chunks=2, dim=0)
-                clean_feat_t, adv_feat_t = torch.chunk(teacher_feat, chunks=2, dim=0)
-                
-                adv_x_s.append(adv_feat_s)
-                adv_x_t.append(adv_feat_t)
-            else:
-                clean_feat_s = student_feat
-                clean_feat_t  = teacher_feat
-            clean_x_s.append(clean_feat_s)
             for item_loss in item_loc.methods:
+
+                img_type = item_loss.img_type
+                assert img_type in ["clean", "adv"]
+                loss_name = item_loss.name
+                student_module = ("student_" +
+                                  item_loc.student_module.replace(".", "_") +
+                                  "_" + img_type)
+                teacher_module = ("teacher_" +
+                                  item_loc.teacher_module.replace(".", "_") +
+                                  "_" + img_type)
                 loss_name = item_loss.name
                 if loss_name not in student_loss.keys():
                     student_loss[loss_name] = torch.zeros(1).cuda()
-                if str(loss_name).startswith("adv") and with_adv:
-                    student_loss[loss_name] += self.distill_losses[loss_name](
-                        adv_feat_s, adv_feat_t
-                    )
-                else:
-                    student_loss[loss_name] += self.distill_losses[loss_name](
-                        clean_feat_s, clean_feat_t, kwargs["gt_bboxes"], img_metas
-                    )
-        if with_adv:
-            img_metas = img_metas[:len(img_metas)//2]
-            for k, v in kwargs.items():
-                kwargs[k] = v[:len(v)//2]
-        student_loss.update(
-            self.student.forward_train_step_2(clean_x_s, img_metas, **kwargs)
-        )
-        if not self.with_logit:
-            return student_loss
-        # clear logit buffer
+                assert (len(self.local_buffer[teacher_module]) != 0
+                        and len(self.local_buffer[student_module]) != 0)
+                loss_input_t = self.local_buffer[teacher_module]
+                loss_input_s = self.local_buffer[student_module]
+                loss_input = self.preprocess_loss_input(
+                    loss_input_s,
+                    loss_input_t,
+                    item_loss,
+                    img_metas,
+                    **kwargs,
+                )
+                student_loss[loss_name] += self.distill_losses[loss_name](
+                    *loss_input)
         for k, v in self.local_buffer.items():
             self.local_buffer[k] = []
-        self.student.forward_train_step_2(adv_x_s, img_metas, **kwargs)
-        with torch.no_grad():
-            self.teacher.eval()
-            self.teacher.forward_train_step_2(adv_x_t, img_metas, **kwargs)
-        for item_loc in self.distill_cfg:
-            if item_loc.type != 'logit':
-                continue
-            student_module = "student_" + item_loc.student_module.replace(".", "_")
-            teacher_module = "teacher_" + item_loc.teacher_module.replace(".", "_")
-            target = torch.cat([lgt[1] for lgt in self.local_buffer[student_module]])
-            valid_idx = target!=len(self.CLASSES)
-            target = target[valid_idx]
-            student_logit = torch.cat([lgt[0] for lgt in self.local_buffer[student_module]])[valid_idx]
-            teacher_logit = torch.cat([lgt[0] for lgt in self.local_buffer[teacher_module]])[valid_idx]
-            
-            for item_loss in item_loc.methods:
-                loss_name  =  item_loss.name
-                student_loss[loss_name] = self.distill_losses[loss_name](student_logit,teacher_logit,target)
         return student_loss
+        # with torch.no_grad():
+        #     self.teacher.eval()
+        #     tmp_feat_t = self.teacher.forward_train_step_1(img, img_metas)
+
+        # student_loss = {}
+        # clean_x_s = []
+        # clean_x_t = []
+        # adv_x_t = []
+        # adv_x_s = []
+        # # buffer_dict = dict(self.named_buffers())
+        # for item_loc in self.distill_cfg:
+        #     if item_loc.type != "feature":
+        #         continue
+        #     postfix = "" if not hasattr(item_loc,
+        #                                 "input_type") else item_loc.input_type
+        #     student_module = ("student_" +
+        #                       item_loc.student_module.replace(".", "_") + "_" +
+        #                       postfix)
+        #     teacher_module = ("teacher_" +
+        #                       item_loc.teacher_module.replace(".", "_") + "_" +
+        #                       postfix)
+
+        #     student_feat = self.get_buffer(student_module)
+        #     teacher_feat = self.get_buffer(teacher_module)
+        #     self.register_buffer(teacher_module, None)
+        #     self.register_buffer(student_module, None)
+        #     if with_adv:
+        #         clean_feat_s, adv_feat_s = torch.chunk(
+        #             student_feat, chunks=2, dim=0)
+        #         clean_feat_t, adv_feat_t = torch.chunk(
+        #             teacher_feat, chunks=2, dim=0)
+
+        #         adv_x_s.append(adv_feat_s)
+        #         adv_x_t.append(adv_feat_t)
+        #     else:
+        #         clean_feat_s = student_feat
+        #         clean_feat_t = teacher_feat
+        #     clean_x_s.append(clean_feat_s)
+        #     clean_x_t.append(clean_feat_t)
+        #     for item_loss in item_loc.methods:
+        #         loss_name = item_loss.name
+        #         if loss_name not in student_loss.keys():
+        #             student_loss[loss_name] = torch.zeros(1).cuda()
+        #         if str(loss_name).startswith("adv") and with_adv:
+        #             student_loss[loss_name] += self.distill_losses[loss_name](
+        #                 adv_feat_s, adv_feat_t)
+        #         else:
+        #             student_loss[loss_name] += self.distill_losses[loss_name](
+        #                 clean_feat_s, clean_feat_t, kwargs["gt_bboxes"],
+        #                 img_metas)
+        # if with_adv:
+        #     img_metas = img_metas[:len(img_metas) // 2]
+        #     for k, v in kwargs.items():
+        #         kwargs[k] = v[:len(v) // 2]
+        # self.input_type = "clean"
+        # student_loss.update(
+        #     self.student.forward_train_step_2(clean_x_s, img_metas, **kwargs))
+        # if not self.with_logit:
+        #     return student_loss
+        # clear logit buffer
+        # for k, v in self.local_buffer.items():
+        #     self.local_buffer[k] = []
+        # self.student.forward_train_step_2(adv_x_s, img_metas, **kwargs)
+        # with torch.no_grad():
+        #     self.teacher.eval()
+        #     self.teacher.forward_train_step_2(adv_x_t, img_metas, **kwargs)
+        # for item_loc in self.distill_cfg:
+        #     if item_loc.type != "logit":
+        #         continue
+        #     postfix = "" if not hasattr(item_loc,
+        #                                 "input_type") else item_loc.input_type
+        #     if postfix == "adv":
+        #         self.input_type = "adv"
+        #         self.student.forward_train_step_2(adv_x_s, img_metas, **kwargs)
+        #         with torch.no_grad():
+        #             self.teacher.eval()
+        #             self.teacher.forward_train_step_2(adv_x_t, img_metas,
+        #                                               **kwargs)
+        #     elif postfix == "clean":
+        #         self.input_type = "clean"
+        #         with torch.no_grad():
+        #             self.teacher.eval()
+        #             self.teacher.forward_train_step_2(clean_x_t, img_metas,
+        #                                               **kwargs)
+        #     student_module = ("student_" +
+        #                       item_loc.student_module.replace(".", "_") + "_" +
+        #                       postfix)
+        #     teacher_module = ("teacher_" +
+        #                       item_loc.teacher_module.replace(".", "_") + "_" +
+        #                       postfix)
+        #     teacher_logit = torch.cat(
+        #         [lgt[0] for lgt in self.local_buffer[teacher_module]])
+        #     student_logit = torch.cat(
+        #         [lgt[0] for lgt in self.local_buffer[student_module]])
+        #     target = torch.cat(
+        #         [lgt[1] for lgt in self.local_buffer[student_module]])
+        #     weights = torch.cat(
+        #         [lgt[2] for lgt in self.local_buffer[student_module]])
+        #     valid_idx = weights != 0
+        #     assert hasattr(item_loc, "logit_filter")
+        #     if item_loc.logit_filter == "gt":
+        #         valid_idx = torch.logical_and(valid_idx,
+        #                                       target != len(self.CLASSES))
+        #         target = target[valid_idx]
+        #     elif item_loc.logit_filter == "teacher":
+        #         _teacher_logit = F.softmax(teacher_logit, 1)
+        #         val, idx = torch.max(_teacher_logit, 1)
+        #         valid_idx = torch.logical_and(valid_idx, val > 0.7)
+        #         target = idx[valid_idx]
+        #     student_logit = student_logit[valid_idx]
+        #     teacher_logit = teacher_logit[valid_idx]
+
+        #     for item_loss in item_loc.methods:
+        #         loss_name = item_loss.name
+        #         student_loss[loss_name] = self.distill_losses[loss_name](
+        #             student_logit, teacher_logit, target)
+        # for k, v in self.local_buffer.items():
+        #     self.local_buffer[k] = []
+        # return student_loss
 
     def simple_test(self, img, img_metas, **kwargs):
         return self.student.simple_test(img, img_metas, **kwargs)
