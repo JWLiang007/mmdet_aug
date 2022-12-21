@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
+import os 
 import pickle
 import shutil
 import tempfile
@@ -111,7 +112,9 @@ def plot_tsne(module,save_path,cls_list=None,num_per_cls=-1):
     features = features[indicator]
     labels = labels[indicator]
     # classes = args.class_names + ["poisoned"]
-
+    sort_idx = torch.argsort(labels)
+    features = features[sort_idx]
+    labels = labels[sort_idx]
     label_class = [classes[i].capitalize() for i in labels]
 
     # Plot T-SNE
@@ -126,6 +129,7 @@ def plot_tsne(module,save_path,cls_list=None,num_per_cls=-1):
         size=(10, 10),
         n_iter = 1000,
     )
+    os.makedirs(os.path.dirname(save_path),exist_ok=True)
     plt.savefig(
         save_path,
         bbox_inches="tight",
