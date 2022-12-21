@@ -219,6 +219,11 @@ class FGDDistiller(BaseDetector):
         """
         checkpoint = load_checkpoint(self.teacher, path, map_location="cpu")
 
+    def empty_buffer(self):
+        for k, v in self.local_buffer.items():
+            for i in reversed(range(len(v))):
+                del v[i]
+ 
     def forward_train(self, img, img_metas, **kwargs):
         """
         Args:
@@ -233,6 +238,9 @@ class FGDDistiller(BaseDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components(student's losses and distiller's losses).
         """
+        self.empty_buffer()
+        # for k, v in self.local_buffer.items():
+        #     self.local_buffer[k] = []
         # self.student.zero_grad()
         # with_adv = False
         if "adv" in kwargs.keys():
@@ -288,8 +296,8 @@ class FGDDistiller(BaseDetector):
                 )
                 student_loss[loss_name] += self.distill_losses[loss_name](
                     *loss_input)
-        for k, v in self.local_buffer.items():
-            self.local_buffer[k] = []
+        # for k, v in self.local_buffer.items():
+        #     self.local_buffer[k] = []
         return student_loss
         # with torch.no_grad():
         #     self.teacher.eval()
