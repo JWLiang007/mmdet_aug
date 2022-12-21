@@ -18,14 +18,14 @@ class AdvFeatureLoss(nn.Module):
     def __init__(self,
                  student_channels,
                  teacher_channels,
-                 name,
+                #  name,
                  alpha_adv,
                 #  layer_idx,
                  loss_type = 'mse',
                  **kwargs
                  ):
         super(AdvFeatureLoss, self).__init__()
-        self.name = name
+        # self.name = name
         # self.layer_idx = layer_idx
         self.alpha_adv = alpha_adv
         self.loss_type = loss_type
