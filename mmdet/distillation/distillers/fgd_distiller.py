@@ -76,7 +76,7 @@ class FGDDistiller(BaseDetector):
         ):
 
             def hook_teacher_forward(module, input, output):
-                if img_type == self.img_type:
+                if img_type == self.img_type and self.run_mode =='train':
                     module_key = teacher_module + "_" + img_type
                     if module_key not in self.local_buffer.keys():
                         self.local_buffer[module_key] = []
@@ -86,7 +86,7 @@ class FGDDistiller(BaseDetector):
                         self.local_buffer[module_key].append(output)
 
             def hook_student_forward(module, input, output):
-                if img_type == self.img_type:
+                if img_type == self.img_type and self.run_mode =='train':
                     module_key = student_module + "_" + img_type
                     if module_key not in self.local_buffer.keys():
                         self.local_buffer[module_key] = []
@@ -238,7 +238,7 @@ class FGDDistiller(BaseDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components(student's losses and distiller's losses).
         """
-        self.empty_buffer()
+        
         # for k, v in self.local_buffer.items():
         #     self.local_buffer[k] = []
         # self.student.zero_grad()
@@ -296,8 +296,9 @@ class FGDDistiller(BaseDetector):
                 )
                 student_loss[loss_name] += self.distill_losses[loss_name](
                     *loss_input)
-        # for k, v in self.local_buffer.items():
-        #     self.local_buffer[k] = []
+        for k, v in self.local_buffer.items():
+            self.local_buffer[k] = []
+        # self.empty_buffer()
         return student_loss
         # with torch.no_grad():
         #     self.teacher.eval()
