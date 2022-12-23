@@ -1,4 +1,4 @@
-_base_ = ["./fgd_retina_rx101_64x4d_distill_retina_r50_fpn_2x_coco.py"]
+_base_ = ["./fgd_retina_rx101_64x4d_distill_retina_r50_fpn_2x_voc.py"]
 
 
 # model settings
@@ -13,7 +13,7 @@ alpha_adv = 0.00001
 loss_type = "mse"
 # dkd loss settings
 alpha_dkd = 1.0
-beta_dkd = 0.25
+beta_dkd = 1.0
 temp_dkd = 1.0
 
 fgd_param = dict(
@@ -180,7 +180,7 @@ img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True
 )
 train_pipeline = [
-    dict(type="LoadImageFromFile", adv_img="data/adv_coco_20c_8_5/"),
+    dict(type="LoadImageFromFile", adv_img="data/adv_voc_8_5/"),
     dict(type="LoadAnnotations", with_bbox=True),
     dict(type="InstanceAug", prob=0.3, subst_full=True, subst_stg="1"),
     dict(type="RandomFlip", flip_ratio=0.0),
