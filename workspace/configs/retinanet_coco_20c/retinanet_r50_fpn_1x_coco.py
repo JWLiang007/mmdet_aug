@@ -7,7 +7,7 @@ _base_ = [
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 auto_scale_lr = dict(enable=True)
 
-CLASSES = ( "airplane", "traffic light", "parking meter", "cat", "bear", "zebra", "skis", "baseball bat", "bottle", "knife", "bowl", "banana","apple","orange", "carrot","dining table", "mouse", "cell phone","oven","toothbrush")
+CLASSES = ('bicycle', 'train', 'fire hydrant', 'stop sign', 'dog', 'bear', 'giraffe', 'snowboard', 'baseball bat', 'bottle', 'sandwich', 'broccoli', 'carrot', 'remote', 'cell phone', 'microwave', 'toaster', 'sink', 'clock', 'vase')
 model = dict(bbox_head=dict(num_classes=20, ))
 data_root = 'data/coco/'
 data = dict(
