@@ -34,13 +34,7 @@ adv_feat_param = dict(
     loss_type=loss_type,
 )
 
-adv_dkd_param = dict(
-    type="DKDLoss",
-    # name="dkd_loss",
-    alpha=alpha_dkd,
-    beta=beta_dkd,
-    temp=temp_dkd,
-)
+
 
 distiller = dict(
     # type="FGDDistiller",
