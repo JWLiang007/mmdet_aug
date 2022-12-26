@@ -96,3 +96,11 @@ class DKDLoss(nn.Module):
 
 
 
+@DISTILL_LOSSES.register_module()
+class OriCELoss(nn.Module):
+    
+    def __init__(self,
+                 ):
+        super(OriCELoss, self).__init__()
+    def forward(self, *loss_student ):
+        return loss_student[0]

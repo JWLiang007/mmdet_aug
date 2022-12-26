@@ -151,11 +151,13 @@ class FGDDistiller(BaseDetector):
         
         if loss_input_type == 'feature':
             if img_type == 'adv':
-                return (loss_input_s[0], loss_input_t[0])
+                return [loss_input_s[0], loss_input_t[0]]
             elif img_type == 'clean':
-                return (loss_input_s[0], loss_input_t[0], kwargs["gt_bboxes"],
-                        img_metas)
+                return [loss_input_s[0], loss_input_t[0], kwargs["gt_bboxes"],
+                        img_metas]
         elif loss_input_type == 'logit':
+            if item_loss.loss_param.type == 'OriCELoss':
+                return [loss_input_s]
             logit_filter = item_loss.logit_filter
             assert logit_filter in ['teacher','gt']
             teacher_logit = torch.cat(
@@ -178,7 +180,7 @@ class FGDDistiller(BaseDetector):
                 target = idx[valid_idx]
             student_logit = student_logit[valid_idx]
             teacher_logit = teacher_logit[valid_idx]
-            return (student_logit,teacher_logit,target)
+            return [student_logit,teacher_logit,target]
                 
     def base_parameters(self):
         return nn.ModuleList([self.student, self.distill_losses])
@@ -281,8 +283,8 @@ class FGDDistiller(BaseDetector):
                                   item_loc.teacher_module.replace(".", "_") +
                                   "_" + img_type)
                 loss_name = item_loss.name
-                if loss_name not in student_loss.keys():
-                    student_loss[loss_name] = torch.zeros(1).cuda()
+                assert loss_name not in student_loss.keys()
+                    # student_loss[loss_name] = torch.zeros(1).cuda()
                 assert (len(self.local_buffer[teacher_module]) != 0
                         and len(self.local_buffer[student_module]) != 0)
                 loss_input_t = self.local_buffer[teacher_module]
@@ -294,7 +296,8 @@ class FGDDistiller(BaseDetector):
                     img_metas,
                     **kwargs,
                 )
-                student_loss[loss_name] += self.distill_losses[loss_name](
+                
+                student_loss[loss_name] = self.distill_losses[loss_name](
                     *loss_input)
         for k, v in self.local_buffer.items():
             self.local_buffer[k] = []
