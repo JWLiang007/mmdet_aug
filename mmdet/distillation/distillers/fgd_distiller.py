@@ -168,18 +168,27 @@ class FGDDistiller(BaseDetector):
                 [lgt[1] for lgt in loss_input_s])
             weights = torch.cat(
                 [lgt[2] for lgt in loss_input_s])
-            valid_idx = weights != 0
+            valid_ind = weights != 0
             if logit_filter == "gt":
-                valid_idx = torch.logical_and(valid_idx,
+                valid_ind = torch.logical_and(valid_ind,
                                               target != len(self.CLASSES))
-                target = target[valid_idx]
+                target = target[valid_ind]
             elif logit_filter == "teacher":
                 _teacher_logit = F.softmax(teacher_logit, 1)
                 val, idx = torch.max(_teacher_logit, 1)
-                valid_idx = torch.logical_and(valid_idx, val > 0.7)
-                target = idx[valid_idx]
-            student_logit = student_logit[valid_idx]
-            teacher_logit = teacher_logit[valid_idx]
+                p_n_ind = torch.zeros_like(val).bool()
+                # set positive anchor
+                pos_idx = torch.where(val > 0.7)[0]
+                p_n_ind[pos_idx]  = True 
+                # set negative anchor
+                if item_loss.get('with_neg',False):
+                    neg_idx  = torch.where(val < 0.3)[0]
+                    neg_idx = neg_idx[torch.randint(neg_idx.shape[0],(pos_idx.shape[0] * 3 ,))]
+                    p_n_ind[neg_idx] = True
+                valid_ind = torch.logical_and(valid_ind, p_n_ind)
+                target = idx[valid_ind]
+            student_logit = student_logit[valid_ind]
+            teacher_logit = teacher_logit[valid_ind]
             return [student_logit,teacher_logit,target]
                 
     def base_parameters(self):
@@ -266,7 +275,7 @@ class FGDDistiller(BaseDetector):
             self.student.forward_train(adv_img, img_metas, **kwargs)
             with torch.no_grad():
                 self.teacher.forward_train(adv_img, img_metas, **kwargs)
-        elif self.with_clean_feature:
+        elif self.with_adv_feature:
             self.student.forward_train_step_1(adv_img, img_metas)
             with torch.no_grad():
                 self.teacher.forward_train_step_1(adv_img, img_metas)
