@@ -125,7 +125,8 @@ class CtrFeatureLoss(nn.Module):
             preds_S(Tensor): Bs*C*H*W, student's feature map
             preds_T(Tensor): Bs*C*H*W, teacher's feature map
         """
-        clean_s = feat_s['clean'][0]
+        
+        clean_s = feat_s['clean'][0].clone().detach()
         clean_t = feat_t['clean'][0]
         adv_s = feat_s['adv'][0]
         adv_t = feat_t['adv'][0]
@@ -135,8 +136,15 @@ class CtrFeatureLoss(nn.Module):
         if self.align is not None:
             clean_s = self.align(clean_s)
             adv_s = self.align(adv_s)
-    
-        loss = self.get_dis_loss(adv_s, adv_t,**kwargs)*self.alpha_ctr / self.get_dis_loss(adv_s, clean_s,**kwargs)
+        
+        n = clean_s.shape[0]
+        clean_s = clean_s.view([n,-1])
+        adv_s = adv_s.view([n,-1])
+        adv_t = adv_t.view([n,-1])
+        similarity = torch.exp(F.cosine_similarity(adv_s, adv_t, dim=1))
+        discrepancy = torch.exp(F.cosine_similarity(adv_s, clean_s, dim=1))
+        loss = torch.sum(-torch.log(similarity/discrepancy)) *self.alpha_ctr/ n 
+        # loss = self.get_dis_loss(adv_s, adv_t,**kwargs)*self.alpha_ctr / self.get_dis_loss(adv_s, clean_s,**kwargs)
             
         return loss
 
