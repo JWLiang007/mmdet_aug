@@ -74,26 +74,32 @@ class FGDDistiller(BaseDetector):
             hook_type="output",
             img_type="clean",
         ):
-
+            img_type_list = img_type if isinstance(img_type,list) else [img_type]
             def hook_teacher_forward(module, input, output):
-                if img_type == self.img_type and self.run_mode =='train':
-                    module_key = teacher_module + "_" + img_type
+                if self.img_type in img_type_list and self.run_mode =='train':
+                    module_key = teacher_module
+                    # + "_" + '_'.join(img_type_list)
                     if module_key not in self.local_buffer.keys():
-                        self.local_buffer[module_key] = []
+                        self.local_buffer[module_key] = {}
+                    if self.img_type not in self.local_buffer[module_key].keys():
+                        self.local_buffer[module_key][self.img_type] = []
                     if hook_type == "input":
-                        self.local_buffer[module_key].append(input)
+                        self.local_buffer[module_key][self.img_type].append(input)
                     elif hook_type == "output":
-                        self.local_buffer[module_key].append(output)
+                        self.local_buffer[module_key][self.img_type].append(output)
 
             def hook_student_forward(module, input, output):
-                if img_type == self.img_type and self.run_mode =='train':
-                    module_key = student_module + "_" + img_type
+                if self.img_type in img_type_list and self.run_mode =='train':
+                    module_key = student_module 
+                    # + "_" + '_'.join(img_type_list)
                     if module_key not in self.local_buffer.keys():
-                        self.local_buffer[module_key] = []
+                        self.local_buffer[module_key] = {}
+                    if self.img_type not in self.local_buffer[module_key].keys():
+                        self.local_buffer[module_key][self.img_type] = []
                     if hook_type == "input":
-                        self.local_buffer[module_key].append(input)
+                        self.local_buffer[module_key][self.img_type].append(input)
                     elif hook_type == "output":
-                        self.local_buffer[module_key].append(output)
+                        self.local_buffer[module_key][self.img_type].append(output)
 
             return hook_teacher_forward, hook_student_forward
 
@@ -125,17 +131,18 @@ class FGDDistiller(BaseDetector):
     def set_loss_flag(self, item_loss):
         loss_input_type = item_loss.loss_input_type
         img_type = item_loss.img_type
+        img_type_list = img_type if isinstance(img_type,list) else [img_type]
         assert loss_input_type in ["logit", "feature"]
-        assert img_type in ["clean", "adv"]
+        assert set(img_type_list).issubset(["clean", "adv"])
         if loss_input_type == "logit":
-            if img_type == "clean":
+            if  "clean" in img_type_list:
                 self.with_clean_logit = True
-            elif img_type == "adv":
+            if  "adv" in img_type_list:
                 self.with_adv_logit = True
         elif loss_input_type == "feature":
-            if img_type == "clean":
+            if "clean" in img_type_list:
                 self.with_clean_feature = True
-            elif img_type == "adv":
+            if "adv" in img_type_list:
                 self.with_adv_feature = True
 
     def preprocess_loss_input(
@@ -147,14 +154,25 @@ class FGDDistiller(BaseDetector):
         **kwargs,
     ):
         img_type = item_loss.img_type 
+        img_type_list = img_type if isinstance(img_type,list) else [img_type]
         loss_input_type = item_loss.loss_input_type
         
+        if len(img_type_list) == 1:
+            if 'adv' in img_type_list :
+                loss_input_s = loss_input_s['adv']
+                loss_input_t = loss_input_t['adv']
+            elif 'clean' in img_type_list:
+                loss_input_s = loss_input_s['clean']
+                loss_input_t = loss_input_t['clean']                
+            
         if loss_input_type == 'feature':
-            if img_type == 'adv':
+            if item_loss.loss_param.type ==  "AdvFeatureLoss":
                 return [loss_input_s[0], loss_input_t[0]]
-            elif img_type == 'clean':
+            if item_loss.loss_param.type ==  "FGDLoss":
                 return [loss_input_s[0], loss_input_t[0], kwargs["gt_bboxes"],
                         img_metas]
+            if item_loss.loss_param.type  == "CtrFeatureLoss":
+                return [loss_input_s,loss_input_t]
         elif loss_input_type == 'logit':
             if item_loss.loss_param.type == 'OriCELoss':
                 return [loss_input_s]
@@ -283,14 +301,13 @@ class FGDDistiller(BaseDetector):
             for item_loss in item_loc.methods:
 
                 img_type = item_loss.img_type
-                assert img_type in ["clean", "adv"]
+                img_type_list = img_type if isinstance(img_type,list) else [img_type]
+                assert set(img_type_list).issubset( ["clean", "adv"])
                 loss_name = item_loss.name
-                student_module = ("student_" +
-                                  item_loc.student_module.replace(".", "_") +
-                                  "_" + img_type)
-                teacher_module = ("teacher_" +
-                                  item_loc.teacher_module.replace(".", "_") +
-                                  "_" + img_type)
+                student_module = "student_" + item_loc.student_module.replace(".", "_") 
+                                #   + "_" + '_'.join(img_type_list)
+                teacher_module = "teacher_" + item_loc.teacher_module.replace(".", "_") 
+                                #   + "_" + '_'.join(img_type_list)
                 loss_name = item_loss.name
                 assert loss_name not in student_loss.keys()
                     # student_loss[loss_name] = torch.zeros(1).cuda()
@@ -309,7 +326,9 @@ class FGDDistiller(BaseDetector):
                 student_loss[loss_name] = self.distill_losses[loss_name](
                     *loss_input)
         for k, v in self.local_buffer.items():
-            self.local_buffer[k] = []
+            for k1,v1 in v.items():
+                v[k1] = []
+            # self.local_buffer[k] = []
         # self.empty_buffer()
         return student_loss
         # with torch.no_grad():
