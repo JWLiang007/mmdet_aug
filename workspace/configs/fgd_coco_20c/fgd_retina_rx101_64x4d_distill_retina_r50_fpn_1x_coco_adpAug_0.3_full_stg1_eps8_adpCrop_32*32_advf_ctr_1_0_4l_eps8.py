@@ -14,7 +14,7 @@ loss_type = "mse"
 # ctr feat loss setting
 alpha_ctr = 1
 with_discp = True
-loss_type_ctr = "contractive"
+loss_type_ctr = "contrastive"
 # dkd loss settings
 alpha_dkd = 0.5
 beta_dkd = 0.125
