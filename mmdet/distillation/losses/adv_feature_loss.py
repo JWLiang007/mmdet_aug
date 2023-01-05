@@ -139,7 +139,7 @@ class CtrFeatureLoss(nn.Module):
             clean_s = self.align(clean_s)
             adv_s = self.align(adv_s)
         n = clean_s.shape[0]
-        if self.loss_type == 'contractive':
+        if self.loss_type == 'contrastive':
             
             
             clean_s = F.softmax(clean_s.view([n,-1]),dim=1)  
