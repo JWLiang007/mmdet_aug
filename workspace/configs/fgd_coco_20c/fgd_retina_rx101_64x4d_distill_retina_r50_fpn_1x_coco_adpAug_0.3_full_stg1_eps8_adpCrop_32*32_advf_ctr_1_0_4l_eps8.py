@@ -14,6 +14,7 @@ loss_type = "mse"
 # ctr feat loss setting
 alpha_ctr = 1
 with_discp = True
+loss_type_ctr = "contractive"
 # dkd loss settings
 alpha_dkd = 0.5
 beta_dkd = 0.125
@@ -47,6 +48,7 @@ ctr_feat_param = dict(
     teacher_channels=256,
     alpha_ctr=alpha_ctr,
     with_discp=with_discp,
+    loss_type = loss_type_ctr,
 )
 
 adv_dkd_param = dict(
