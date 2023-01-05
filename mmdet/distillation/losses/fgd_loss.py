@@ -22,7 +22,7 @@ class FGDLoss(nn.Module):
     def __init__(self,
                  student_channels,
                  teacher_channels,
-                 name,
+                #  name,
                  temp=0.5,
                  alpha_fgd=0.001,
                  beta_fgd=0.0005,

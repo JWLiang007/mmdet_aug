@@ -588,6 +588,7 @@ class InstanceAug:
     def __init__(self,
                  size=32*32,
                  prob=0.5,
+                 adaptive = True,
                  show_dir = None,
                  subst_full = False,
                  subst_stg = '1',
@@ -599,6 +600,7 @@ class InstanceAug:
         self.subst_full = subst_full
         self.subst_stg = subst_stg
         self.flip_stg = flip_stg
+        self.adaptive = adaptive
 
     def __call__(self, results):
         if random.random() > self.prob:
@@ -607,6 +609,9 @@ class InstanceAug:
         adv_img  = results['adv']
         if 'adp' in results['img_fields']:
             adv_img = results['adp']
+        if not self.adaptive:
+            results['img'] = adv_img.copy()
+            return results
         ori_img = results['img']
         ori_img_copy = ori_img.copy()
         find_s_bbox = False
