@@ -101,6 +101,7 @@ class CtrFeatureLoss(nn.Module):
                  alpha_ctr,
                 #  layer_idx,
                  with_discp = True,
+                 loss_type = 'mse',
                  **kwargs
                  ):
         super(CtrFeatureLoss, self).__init__()
@@ -108,6 +109,7 @@ class CtrFeatureLoss(nn.Module):
         # self.layer_idx = layer_idx
         self.alpha_ctr = alpha_ctr
         self.with_discp = with_discp
+        self.loss_type = loss_type
         self.loss_param = kwargs
         if student_channels != teacher_channels:
             self.align = nn.Conv2d(student_channels, teacher_channels, kernel_size=1, stride=1, padding=0)
@@ -136,17 +138,45 @@ class CtrFeatureLoss(nn.Module):
         if self.align is not None:
             clean_s = self.align(clean_s)
             adv_s = self.align(adv_s)
-        
         n = clean_s.shape[0]
-        clean_s = clean_s.view([n,-1])
-        adv_s = adv_s.view([n,-1])
-        adv_t = adv_t.view([n,-1])
-        similarity = torch.exp(F.cosine_similarity(adv_s, adv_t, dim=1))
-        if self.with_discp:
-            discrepancy = torch.exp(F.cosine_similarity(adv_s, clean_s, dim=1))
-        else:
-            discrepancy = 1.
-        loss = torch.sum(-torch.log(similarity/discrepancy)) *self.alpha_ctr/ n 
-        # loss = self.get_dis_loss(adv_s, adv_t,**kwargs)*self.alpha_ctr / self.get_dis_loss(adv_s, clean_s,**kwargs)
+        if self.loss_type == 'contractive':
             
+            
+            clean_s = F.softmax(clean_s.view([n,-1]),dim=1)  
+            adv_s = F.softmax(adv_s.view([n,-1]),dim=1)  
+            adv_t = F.softmax(adv_t.view([n,-1]),dim=1)  
+            similarity = torch.exp(F.cosine_similarity(adv_s, adv_t, dim=1))
+            if self.with_discp:
+                discrepancy = torch.exp(F.cosine_similarity(adv_s, clean_s, dim=1))
+            else:
+                discrepancy = 1.
+            loss = torch.sum(-torch.log(similarity/discrepancy)) *self.alpha_ctr/ n 
+            # loss = self.get_dis_loss(adv_s, adv_t,**kwargs)*self.alpha_ctr / self.get_dis_loss(adv_s, clean_s,**kwargs)
+        elif self.loss_type == 'mse':
+            
+            loss = self.get_dis_loss(adv_s, adv_t,**kwargs) * self.alpha_ctr
+        return loss
+    
+    def get_dis_loss(self, preds_S, preds_T,**kwargs):
+
+        N, C, H, W = preds_T.shape
+        if self.loss_type == 'mse':
+            loss_mse = nn.MSELoss(reduction='sum')
+            loss = loss_mse(preds_S, preds_T)/N
+        elif self.loss_type == 'l1':
+            loss_mse = nn.L1Loss(reduction='sum')
+            loss = loss_mse(preds_S, preds_T)/N
+        elif self.loss_type == 'cwd':
+            assert 'tau' in self.loss_param.keys()
+            tau = self.loss_param['tau']
+            softmax_pred_T = F.softmax(preds_T.view(-1, W * H) / tau, dim=1)
+
+            logsoftmax = torch.nn.LogSoftmax(dim=1)
+            loss = torch.sum(softmax_pred_T *
+                             logsoftmax(preds_T.view(-1, W * H) / tau) -
+                             softmax_pred_T *
+                             logsoftmax(preds_S.view(-1, W * H) / tau)) * (
+                                 tau**2)
+
+            loss =  loss / (C * N)
         return loss
