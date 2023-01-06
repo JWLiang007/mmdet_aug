@@ -12,8 +12,8 @@ lambda_fgd = 0.000005
 alpha_adv = 0.00001
 loss_type = "mse"
 # ctr feat loss setting
-alpha_ctr = 1
-with_discp = False
+alpha_ctr = 0.125
+with_discp = True
 loss_type_ctr = "contrastive"
 # dkd loss settings
 alpha_dkd = 0.5
