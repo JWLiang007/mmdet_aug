@@ -164,7 +164,7 @@ class CtrFeatureLoss(nn.Module):
 
         N, C, H, W = preds_T.shape
         if self.loss_type == 'mse':
-            reduction = kwargs['reduction'] if hasattr(kwargs,'reduction') else 'sum'
+            reduction = kwargs.get('reduction','sum')
             loss_mse = nn.MSELoss(reduction=reduction)
             loss = loss_mse(preds_S, preds_T)
         elif self.loss_type == 'l1':
