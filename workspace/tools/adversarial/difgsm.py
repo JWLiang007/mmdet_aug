@@ -92,9 +92,11 @@ class DIFGSM(Attack):
 
             adv_images = adv_images.detach() + alpha * grad.sign()
             delta = torch.clamp(adv_images - images, min=-eps, max=eps)
+
             # for chn in range(adv_images.shape[1]):
             #     adv_images[:,chn:chn+1,:,:] = torch.clamp(images[:,chn:chn+1,:,:] + delta[:,chn:chn+1,:,:], min=lb[chn], max=ub[chn]).detach()
             adv_images = mmdet_clamp(images+delta,lb,ub)
+
 
         data['img'][0].data[0] = adv_images
         return adv_images
