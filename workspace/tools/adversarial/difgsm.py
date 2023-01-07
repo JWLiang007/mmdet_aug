@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .attack import Attack
+from .util import mmdet_clamp
 
 
 class DIFGSM(Attack):
@@ -61,8 +62,9 @@ class DIFGSM(Attack):
         if self.random_start:
             # Starting at a uniformly random point
             adv_images = adv_images + torch.empty_like(adv_images).uniform_(-eps, eps)
-            for  chn in range(adv_images.shape[1]):
-                adv_images[:,chn:chn+1,:,:] = torch.clamp(adv_images[:,chn:chn+1,:,:], min=lb[chn], max=ub[chn]).detach()
+            # for  chn in range(adv_images.shape[1]):
+            #     adv_images[:,chn:chn+1,:,:] = torch.clamp(adv_images[:,chn:chn+1,:,:], min=lb[chn], max=ub[chn]).detach()
+            adv_images = mmdet_clamp(adv_images,lb,ub)
         new_data = {}
         new_data['img_metas'] = data['img_metas'][0].data[0]
         for i in range(self.steps):
@@ -80,7 +82,6 @@ class DIFGSM(Attack):
                 loss_cls = sum(_loss.mean() for _loss in losses['loss_cls'])
 
             self.model.zero_grad()
-            loss_cls= loss_cls* (-1.0)
             loss_cls.backward()
             grad = adv_images.grad.data
 
@@ -89,12 +90,13 @@ class DIFGSM(Attack):
             grad = grad + momentum * self.decay
             momentum = grad
 
-            adv_images = adv_images.detach() - alpha * grad.sign()
+            adv_images = adv_images.detach() + alpha * grad.sign()
             delta = torch.clamp(adv_images - images, min=-eps, max=eps)
-            for chn in range(adv_images.shape[1]):
-                adv_images[:,chn:chn+1,:,:] = torch.clamp(images[:,chn:chn+1,:,:] + delta[:,chn:chn+1,:,:], min=lb[chn], max=ub[chn]).detach()
+            # for chn in range(adv_images.shape[1]):
+            #     adv_images[:,chn:chn+1,:,:] = torch.clamp(images[:,chn:chn+1,:,:] + delta[:,chn:chn+1,:,:], min=lb[chn], max=ub[chn]).detach()
+            adv_images = mmdet_clamp(images+delta,lb,ub)
 
-            data['img'][0].data[0] = adv_images
+        data['img'][0].data[0] = adv_images
         return adv_images
 
     def input_diversity(self, x):
