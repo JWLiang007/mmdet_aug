@@ -93,6 +93,26 @@ class DKDLoss(nn.Module):
     #     loss = self.loss_weight * loss / (C * N)
 
     #     return loss
+    
+@DISTILL_LOSSES.register_module()
+class CELoss(nn.Module):
+    
+    def __init__(self,
+                 alpha,
+                 ):
+        super(CELoss, self).__init__()
+        self.alpha = alpha
+    def forward(self,  logits_student, logits_teacher, target, ):
+        norm_logits_teacher = F.softmax(logits_teacher , dim=1)
+        ce_loss = F.cross_entropy(logits_student,norm_logits_teacher,) * self.alpha
+        return ce_loss
 
 
-
+@DISTILL_LOSSES.register_module()
+class OriCELoss(nn.Module):
+    
+    def __init__(self,
+                 ):
+        super(OriCELoss, self).__init__()
+    def forward(self, *loss_student ):
+        return loss_student[0]
