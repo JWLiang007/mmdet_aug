@@ -11,7 +11,7 @@ lambda_fgd = 0.000005
 
 # ctr feat loss setting
 alpha_ctr = 1
-with_discp = False
+with_discp = True
 loss_type_ctr = "mse"
 
 

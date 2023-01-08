@@ -13,7 +13,10 @@ lambda_fgd = 0.000005
 alpha_ctr = 1
 with_discp = False
 loss_type_ctr = "mse"
-
+# dkd loss settings
+alpha_dkd = 0.5
+beta_dkd = 0.125
+temp_dkd = 1.0
 
 fgd_param = dict(
     type="FGDLoss",
@@ -38,7 +41,13 @@ ctr_feat_param = dict(
     loss_type = loss_type_ctr,
 )
 
-
+adv_dkd_param = dict(
+    type="DKDLoss",
+    # name="dkd_loss",
+    alpha=alpha_dkd,
+    beta=beta_dkd,
+    temp=temp_dkd,
+)
 
 distiller = dict(
     # type="FGDDistiller",
@@ -46,7 +55,21 @@ distiller = dict(
     # init_student=True,
     
     distill_cfg=[
-    
+        dict(
+            student_module="bbox_head.loss_cls",
+            teacher_module="bbox_head.loss_cls",
+
+            methods=[
+                dict(
+                    name="adv_dkd_loss",
+                    loss_input_type="logit",
+                    hook_type = 'input',
+                    logit_filter="teacher",
+                    img_type = 'adv',
+                    loss_param=adv_dkd_param,
+                ),
+            ],
+        ),
         dict(
             student_module="neck.fpn_convs.0.conv",
             teacher_module="neck.fpn_convs.0.conv",
