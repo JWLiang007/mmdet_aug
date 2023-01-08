@@ -154,10 +154,11 @@ class CtrFeatureLoss(nn.Module):
             # loss = self.get_dis_loss(adv_s, adv_t,**kwargs)*self.alpha_ctr / self.get_dis_loss(adv_s, clean_s,**kwargs)
         elif self.loss_type == 'mse':
             if self.with_discp:
-                discrepancy = torch.exp(self.get_dis_loss(adv_s, clean_s,reduction='mean',**kwargs))
+                discrepancy = torch.exp(torch.max(torch.zeros(1).cuda(),self.get_dis_loss(adv_s, clean_s,reduction='mean',**kwargs)))
             else:
                 discrepancy = 1.
-            loss = self.get_dis_loss(adv_s, adv_t,reduction='sum',**kwargs) * self.alpha_ctr / discrepancy
+            loss = torch.exp(self.get_dis_loss(adv_s, adv_t,reduction='mean',**kwargs)) * self.alpha_ctr / discrepancy
+
         return loss
     
     def get_dis_loss(self, preds_S, preds_T,**kwargs):
