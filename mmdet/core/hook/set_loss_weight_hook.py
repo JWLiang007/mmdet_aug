@@ -23,7 +23,8 @@ class SetLossWeightHook(Hook):
         
         if self.losses is None :
             self.losses = dict(runner.model.module.distill_losses)
-        coefficient = self.eta_min + 0.5 * (self.eta_max - self.eta_min) * (1 + np.cos(np.pi * (cur_epoch - self.start_epoch) / runner.max_epochs))
+        # coefficient = self.eta_min + 0.5 * (self.eta_max - self.eta_min) * (1 + np.cos(np.pi * (cur_epoch - self.start_epoch) / runner.max_epochs))
+        coefficient = self.eta_min +  (self.eta_max - self.eta_min) *  np.cos( 0.5 * np.pi * (cur_epoch - self.start_epoch) / runner.max_epochs)
     
         for loss_name, attrs in self.attrs.items():
             assert loss_name in self.losses
