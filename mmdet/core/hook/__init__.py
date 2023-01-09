@@ -9,10 +9,11 @@ from .wandblogger_hook import MMDetWandbHook
 from .yolox_lrupdater_hook import YOLOXLrUpdaterHook
 from .yolox_mode_switch_hook import YOLOXModeSwitchHook
 from .set_run_mode_hook import SetRunModeHook
+from .set_loss_weight_hook import SetLossWeightHook
 
 __all__ = [
     'SyncRandomSizeHook', 'YOLOXModeSwitchHook', 'SyncNormHook',
     'ExpMomentumEMAHook', 'LinearMomentumEMAHook', 'YOLOXLrUpdaterHook',
     'CheckInvalidLossHook', 'SetEpochInfoHook', 'MemoryProfilerHook',
-    'MMDetWandbHook','SetRunModeHook'
+    'MMDetWandbHook','SetRunModeHook','SetLossWeightHook'
 ]
