@@ -11,6 +11,10 @@ lambda_fgd = 0.000005
 # adv loss settings
 alpha_adv = 0.00001
 loss_type = "mse"
+# ctr feat loss setting
+alpha_ctr = 0.00001
+with_discp = True
+loss_type_ctr = "mse"
 # dkd loss settings
 alpha_dkd = 1.0
 beta_dkd = 0.5
@@ -39,6 +43,15 @@ adv_feat_param = dict(
     loss_type=loss_type,
 )
 
+ctr_feat_param = dict(
+    type="CtrFeatureLoss",
+    # name="adv_loss",
+    student_channels=256,
+    teacher_channels=256,
+    alpha_ctr=alpha_ctr,
+    with_discp=with_discp,
+    loss_type = loss_type_ctr,
+)
 adv_ce_param = dict(
     type="CELoss",
     # name="dkd_loss",
@@ -82,8 +95,8 @@ distiller = dict(
                     name="adv_loss_fpn_0",
                     loss_input_type="feature",
                     hook_type = 'output',
-                    img_type = 'adv',
-                    loss_param=adv_feat_param,
+                    img_type = ['adv','clean'],
+                    loss_param=ctr_feat_param,
                 ),
             ],
         ),
@@ -103,8 +116,8 @@ distiller = dict(
                     name="adv_loss_fpn_1",
                     loss_input_type="feature",
                     hook_type = 'output',
-                    img_type = 'adv',
-                    loss_param=adv_feat_param,
+                    img_type = ['adv','clean'],
+                    loss_param=ctr_feat_param,
                 ),
             ],
         ),
@@ -124,8 +137,8 @@ distiller = dict(
                     name="adv_loss_fpn_2",
                     loss_input_type="feature",
                     hook_type = 'output',
-                    img_type = 'adv',
-                    loss_param=adv_feat_param,
+                    img_type = ['adv','clean'],
+                    loss_param=ctr_feat_param,
                 ),
             ],
         ),
@@ -145,8 +158,8 @@ distiller = dict(
                     name="adv_loss_fpn_3",
                     loss_input_type="feature",
                     hook_type = 'output',
-                    img_type = 'adv',
-                    loss_param=adv_feat_param,
+                    img_type = ['adv','clean'],
+                    loss_param=ctr_feat_param,
                 ),
             ],
         ),
@@ -168,8 +181,8 @@ distiller = dict(
                     name="adv_loss_fpn_4",
                     loss_input_type="feature",
                     hook_type = 'output',
-                    img_type = 'adv',
-                    loss_param=adv_feat_param,
+                    img_type = ['adv','clean'],
+                    loss_param=ctr_feat_param,
                 ),
             ],
         ),
