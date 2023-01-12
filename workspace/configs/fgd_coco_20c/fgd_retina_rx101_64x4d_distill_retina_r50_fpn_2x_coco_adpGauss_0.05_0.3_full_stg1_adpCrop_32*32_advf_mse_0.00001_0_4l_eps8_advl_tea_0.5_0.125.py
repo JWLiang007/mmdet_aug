@@ -1,4 +1,4 @@
-_base_ = ["./fgd_retina_rx101_64x4d_distill_retina_r50_fpn_1x_coco.py"]
+_base_ = ["./fgd_retina_rx101_64x4d_distill_retina_r50_fpn_2x_coco.py"]
 
 # model settings
 find_unused_parameters = True
@@ -10,6 +10,10 @@ lambda_fgd = 0.000005
 # adv loss settings
 alpha_adv = 0.00001
 loss_type = "mse"
+# dkd loss settings
+alpha_dkd = 0.5
+beta_dkd = 0.125
+temp_dkd = 1.0
 
 fgd_param = dict(
     type="FGDLoss",
@@ -32,11 +36,33 @@ adv_feat_param = dict(
     loss_type=loss_type,
 )
 
+adv_dkd_param = dict(
+    type="DKDLoss",
+    # name="dkd_loss",
+    alpha=alpha_dkd,
+    beta=beta_dkd,
+    temp=temp_dkd,
+)
+
 distiller = dict(
     # type="FGDDistiller",
     # teacher_pretrained="checkpoints/retinanet_x101_voc_24.pth",
     # init_student=True,
     distill_cfg=[
+        dict(
+            student_module="bbox_head.loss_cls",
+            teacher_module="bbox_head.loss_cls",
+            methods=[
+                dict(
+                    name="adv_dkd_loss",
+                    loss_input_type="logit",
+                    hook_type='input',
+                    logit_filter="teacher",
+                    img_type='adv',
+                    loss_param=adv_dkd_param,
+                ),
+            ],
+        ),
         dict(
             student_module="neck.fpn_convs.0.conv",
             teacher_module="neck.fpn_convs.0.conv",
@@ -144,7 +170,12 @@ img_norm_cfg = dict(
 train_pipeline = [
     dict(type="LoadImageFromFile", adv_img="data/adv_coco_20c_8_5/"),
     dict(type="LoadAnnotations", with_bbox=True),
-    dict(type="InstanceAug", prob=0.3, subst_full=True, subst_stg="1"),
+    dict(
+        type="GaussianNoise",
+        ratio=0.05,
+        prob=0.3,
+        subst_full=True,
+        subst_stg="1"),
     dict(type="RandomFlip", flip_ratio=0.0),
     dict(
         type="RandomCrop",
