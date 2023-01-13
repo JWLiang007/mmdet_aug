@@ -1,13 +1,10 @@
 _base_ = [
-    './fgd_cascade_mask_rcnn_rx101_32x4d_distill_mask_rcnn_r50_fpn_2x_coco.py'
+    './mgd_cascade_mask_rcnn_rx101_32x4d_distill_mask_rcnn_r50_fpn_2x_coco.py'
 ]
 # model settings
 find_unused_parameters = True
-temp = 0.5
-alpha_fgd = 0.00005
-beta_fgd = 0.000025
-gamma_fgd = 0.00005
-lambda_fgd = 0.0000005
+alpha_mgd = 0.0000005
+lambda_mgd = 0.45
 # adv loss settings
 alpha_adv = 0.00000025
 loss_type = 'mse'
@@ -16,16 +13,13 @@ alpha_dkd = 0.5
 beta_dkd = 0.125
 temp_dkd = 1.0
 
-fgd_param = dict(
-    type="FGDLoss",
-    # name="fgd_loss",
+mgd_param = dict(
+    type="MGDLoss",
+    # name="mgd_loss",
     student_channels=256,
     teacher_channels=256,
-    temp=temp,
-    alpha_fgd=alpha_fgd,
-    beta_fgd=beta_fgd,
-    gamma_fgd=gamma_fgd,
-    lambda_fgd=lambda_fgd,
+    alpha_mgd=alpha_mgd,
+    lambda_mgd=lambda_mgd,
 )
 
 adv_feat_param = dict(
@@ -70,11 +64,11 @@ distiller = dict(
             teacher_module="neck.fpn_convs.0.conv",
             methods=[
                 dict(
-                    name="fgd_loss_fpn_0",
+                    name="mgd_loss_fpn_0",
                     loss_input_type="feature",
                     hook_type='output',
                     img_type='clean',
-                    loss_param=fgd_param,
+                    loss_param=mgd_param,
                 ),
                 dict(
                     name="adv_loss_fpn_0",
@@ -90,11 +84,11 @@ distiller = dict(
             teacher_module="neck.fpn_convs.1.conv",
             methods=[
                 dict(
-                    name="fgd_loss_fpn_1",
+                    name="mgd_loss_fpn_1",
                     loss_input_type="feature",
                     hook_type='output',
                     img_type='clean',
-                    loss_param=fgd_param,
+                    loss_param=mgd_param,
                 ),
                 dict(
                     name="adv_loss_fpn_1",
@@ -110,11 +104,11 @@ distiller = dict(
             teacher_module="neck.fpn_convs.2.conv",
             methods=[
                 dict(
-                    name="fgd_loss_fpn_2",
+                    name="mgd_loss_fpn_2",
                     loss_input_type="feature",
                     hook_type='output',
                     img_type='clean',
-                    loss_param=fgd_param,
+                    loss_param=mgd_param,
                 ),
                 dict(
                     name="adv_loss_fpn_2",
@@ -130,11 +124,11 @@ distiller = dict(
             teacher_module="neck.fpn_convs.3.conv",
             methods=[
                 dict(
-                    name="fgd_loss_fpn_3",
+                    name="mgd_loss_fpn_3",
                     loss_input_type="feature",
                     hook_type='output',
                     img_type='clean',
-                    loss_param=fgd_param,
+                    loss_param=mgd_param,
                 ),
                 dict(
                     name="adv_loss_fpn_3",

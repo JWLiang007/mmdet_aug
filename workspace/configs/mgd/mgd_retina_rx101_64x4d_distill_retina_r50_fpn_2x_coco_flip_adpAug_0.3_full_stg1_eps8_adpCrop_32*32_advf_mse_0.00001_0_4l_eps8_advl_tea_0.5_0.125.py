@@ -1,31 +1,24 @@
-_base_ = [
-    './fgd_cascade_mask_rcnn_rx101_32x4d_distill_mask_rcnn_r50_fpn_2x_coco.py'
-]
+_base_ = ["./fgd_retina_rx101_64x4d_distill_retina_r50_fpn_2x_coco.py"]
+
 # model settings
 find_unused_parameters = True
-temp = 0.5
-alpha_fgd = 0.00005
-beta_fgd = 0.000025
-gamma_fgd = 0.00005
-lambda_fgd = 0.0000005
+alpha_mgd = 0.0000005
+lambda_mgd = 0.45
 # adv loss settings
-alpha_adv = 0.00000025
-loss_type = 'mse'
+alpha_adv = 0.00001
+loss_type = "mse"
 # dkd loss settings
 alpha_dkd = 0.5
 beta_dkd = 0.125
 temp_dkd = 1.0
 
-fgd_param = dict(
-    type="FGDLoss",
-    # name="fgd_loss",
+mgd_param = dict(
+    type="MGDLoss",
+    # name="mgd_loss",
     student_channels=256,
     teacher_channels=256,
-    temp=temp,
-    alpha_fgd=alpha_fgd,
-    beta_fgd=beta_fgd,
-    gamma_fgd=gamma_fgd,
-    lambda_fgd=lambda_fgd,
+    alpha_mgd=alpha_mgd,
+    lambda_mgd=lambda_mgd,
 )
 
 adv_feat_param = dict(
@@ -51,15 +44,14 @@ distiller = dict(
     # init_student=True,
     distill_cfg=[
         dict(
-            student_module="roi_head.bbox_head.loss_cls",
-            teacher_module="roi_head.bbox_head.2.loss_cls",
+            student_module="bbox_head.loss_cls",
+            teacher_module="bbox_head.loss_cls",
             methods=[
                 dict(
                     name="adv_dkd_loss",
                     loss_input_type="logit",
                     hook_type='input',
                     logit_filter="teacher",
-                    threshold_p=0.0,
                     img_type='adv',
                     loss_param=adv_dkd_param,
                 ),
@@ -70,11 +62,11 @@ distiller = dict(
             teacher_module="neck.fpn_convs.0.conv",
             methods=[
                 dict(
-                    name="fgd_loss_fpn_0",
+                    name="mgd_loss_fpn_0",
                     loss_input_type="feature",
                     hook_type='output',
                     img_type='clean',
-                    loss_param=fgd_param,
+                    loss_param=mgd_param,
                 ),
                 dict(
                     name="adv_loss_fpn_0",
@@ -90,11 +82,11 @@ distiller = dict(
             teacher_module="neck.fpn_convs.1.conv",
             methods=[
                 dict(
-                    name="fgd_loss_fpn_1",
+                    name="mgd_loss_fpn_1",
                     loss_input_type="feature",
                     hook_type='output',
                     img_type='clean',
-                    loss_param=fgd_param,
+                    loss_param=mgd_param,
                 ),
                 dict(
                     name="adv_loss_fpn_1",
@@ -110,11 +102,11 @@ distiller = dict(
             teacher_module="neck.fpn_convs.2.conv",
             methods=[
                 dict(
-                    name="fgd_loss_fpn_2",
+                    name="mgd_loss_fpn_2",
                     loss_input_type="feature",
                     hook_type='output',
                     img_type='clean',
-                    loss_param=fgd_param,
+                    loss_param=mgd_param,
                 ),
                 dict(
                     name="adv_loss_fpn_2",
@@ -130,14 +122,34 @@ distiller = dict(
             teacher_module="neck.fpn_convs.3.conv",
             methods=[
                 dict(
-                    name="fgd_loss_fpn_3",
+                    name="mgd_loss_fpn_3",
                     loss_input_type="feature",
                     hook_type='output',
                     img_type='clean',
-                    loss_param=fgd_param,
+                    loss_param=mgd_param,
                 ),
                 dict(
                     name="adv_loss_fpn_3",
+                    loss_input_type="feature",
+                    hook_type='output',
+                    img_type='adv',
+                    loss_param=adv_feat_param,
+                ),
+            ],
+        ),
+        dict(
+            student_module="neck.fpn_convs.4.conv",
+            teacher_module="neck.fpn_convs.4.conv",
+            methods=[
+                dict(
+                    name="mgd_loss_fpn_4",
+                    loss_input_type="feature",
+                    hook_type='output',
+                    img_type='clean',
+                    loss_param=mgd_param,
+                ),
+                dict(
+                    name="adv_loss_fpn_4",
                     loss_input_type="feature",
                     hook_type='output',
                     img_type='adv',
@@ -150,24 +162,23 @@ distiller = dict(
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
-    dict(type='LoadImageFromFile', adv_img='data/cmr_adv_coco_8_5/'),
-    dict(type='LoadAnnotations', with_bbox=True, with_mask=True),
-    dict(type='InstanceAug', prob=0.3, subst_full=True, subst_stg='1'),
-    dict(type='RandomFlip', flip_ratio=0.5),
+    dict(type="LoadImageFromFile", adv_img="data/adv_coco_8_5/"),
+    dict(type="LoadAnnotations", with_bbox=True),
+    dict(type="InstanceAug", prob=0.3, subst_full=True, subst_stg="1"),
+    dict(type="RandomFlip", flip_ratio=0.5),
     dict(
-        type='RandomCrop',
+        type="RandomCrop",
         crop_size=(0.8, 0.8),
-        crop_type='relative_range',
+        crop_type="relative_range",
         adaptive=True,
         bbox_size=(32, 32),
-        subst_stg='1'),
-    dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
-    dict(type='Normalize', **img_norm_cfg),
-    dict(type='Pad', size_divisor=32),
-    dict(type='DefaultFormatBundle'),
-    dict(
-        type='Collect',
-        keys=['img', 'adv', 'gt_bboxes', 'gt_labels', 'gt_masks']),
+        subst_stg="1",
+    ),
+    dict(type="Resize", img_scale=(1333, 800), keep_ratio=True),
+    dict(type="Normalize", **img_norm_cfg),
+    dict(type="Pad", size_divisor=32),
+    dict(type="DefaultFormatBundle"),
+    dict(type="Collect", keys=["img", "adv", "gt_bboxes", "gt_labels"]),
 ]
 
 data = dict(train=dict(pipeline=train_pipeline), )

@@ -182,6 +182,10 @@ class FGDDistiller(BaseDetector):
                     loss_input_s[0], loss_input_t[0], kwargs["gt_bboxes"],
                     img_metas
                 ]
+            if item_loss.loss_param.type == "MGDLoss":
+                return [
+                    loss_input_s[0], loss_input_t[0]
+                ]
             if item_loss.loss_param.type == "CtrFeatureLoss":
                 return [loss_input_s, loss_input_t]
         elif loss_input_type == 'logit':
