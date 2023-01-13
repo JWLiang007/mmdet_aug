@@ -123,7 +123,7 @@ distiller = dict(
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
-    dict(type='LoadImageFromFile', adv_img='data/cmr_adv_coco_8_5/'),
+    dict(type='LoadImageFromFile', adv_img='data/cmr_adv_coco_20c_8_5/'),
     dict(type='LoadAnnotations', with_bbox=True, with_mask=True),
     dict(type='InstanceAug', prob=0.3, subst_full=True, subst_stg='1'),
     dict(type='RandomFlip', flip_ratio=0.0),

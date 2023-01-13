@@ -1,5 +1,5 @@
 _base_ = [
-    './fgd_cascade_mask_rcnn_rx101_32x4d_distill_mask_rcnn_r50_fpn_2x_coco.py'
+    './fgd_cascade_mask_rcnn_rx101_32x4d_distill_mask_rcnn_r50_fpn_1x_coco.py'
 ]
 # model settings
 find_unused_parameters = True
@@ -50,7 +50,7 @@ distiller = dict(
     # teacher_pretrained="checkpoints/retinanet_x101_voc_24.pth",
     # init_student=True,
     distill_cfg=[
-        dict(
+       dict(
             student_module="roi_head.bbox_head.loss_cls",
             teacher_module="roi_head.bbox_head.2.loss_cls",
 
@@ -60,8 +60,8 @@ distiller = dict(
                     loss_input_type="logit",
                     hook_type = 'input',
                     logit_filter="teacher",
-                    img_type = 'adv',
                     threshold_p = 0.0,
+                    img_type = 'adv',
                     loss_param=adv_dkd_param,
                 ),
             ],

@@ -1,5 +1,5 @@
 _base_ = [
-    './fgd_cascade_mask_rcnn_rx101_32x4d_distill_mask_rcnn_r50_fpn_2x_coco.py'
+    './fgd_cascade_mask_rcnn_rx101_32x4d_distill_mask_rcnn_r50_fpn_1x_coco.py'
 ]
 # model settings
 find_unused_parameters = True
@@ -11,10 +11,6 @@ lambda_fgd = 0.0000005
 # adv loss settings
 alpha_adv = 0.00000025
 loss_type = 'mse'
-# dkd loss settings
-alpha_dkd = 0.5
-beta_dkd = 0.125
-temp_dkd = 1.0
 
 fgd_param = dict(
     type="FGDLoss",
@@ -37,35 +33,11 @@ adv_feat_param = dict(
     loss_type=loss_type,
 )
 
-adv_dkd_param = dict(
-    type="DKDLoss",
-    # name="dkd_loss",
-    alpha=alpha_dkd,
-    beta=beta_dkd,
-    temp=temp_dkd,
-)
-
 distiller = dict(
     # type="FGDDistiller",
     # teacher_pretrained="checkpoints/retinanet_x101_voc_24.pth",
     # init_student=True,
     distill_cfg=[
-        dict(
-            student_module="roi_head.bbox_head.loss_cls",
-            teacher_module="roi_head.bbox_head.2.loss_cls",
-
-            methods=[
-                dict(
-                    name="adv_dkd_loss",
-                    loss_input_type="logit",
-                    hook_type = 'input',
-                    logit_filter="teacher",
-                    img_type = 'adv',
-                    threshold_p = 0.0,
-                    loss_param=adv_dkd_param,
-                ),
-            ],
-        ),
         dict(
             student_module="neck.fpn_convs.0.conv",
             teacher_module="neck.fpn_convs.0.conv",
