@@ -307,11 +307,10 @@ class FGDDistiller(BaseDetector):
             kwargs_t = kwargs.copy()
             with torch.no_grad():
                 if  isinstance(self.teacher,TwoStageDetector):
-                    kwargs_t['return_proposals'] = True
-                    proposals = self.teacher.forward_train(adv_img, img_metas, **kwargs_t)
+                    kwargs_t['return_sample_results'] = True
+                    sample_results = self.teacher.forward_train(adv_img, img_metas, **kwargs_t)
             if isinstance(self.student,TwoStageDetector):
-                kwargs_t['override_proposals'] = True
-                kwargs_t['proposals'] = proposals
+                kwargs_s['sample_results'] = sample_results
                 self.student.forward_train(adv_img, img_metas, **kwargs_s)
 
         elif self.with_adv_feature:

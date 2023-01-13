@@ -124,15 +124,14 @@ class TwoStageDetector(BaseDetector):
         Returns:
             dict[str, Tensor]: a dictionary of loss components
         """
-        override_proposals= kwargs.pop('override_proposals',False)
-        return_proposals=kwargs.pop('return_proposals',False)
+        return_sample_results=kwargs.get('return_sample_results',False)
         
         x = self.extract_feat(img)
 
         losses = dict()
 
         # RPN forward and loss
-        if self.with_rpn and not override_proposals:
+        if self.with_rpn :
             proposal_cfg = self.train_cfg.get('rpn_proposal',
                                               self.test_cfg.rpn)
             rpn_losses, proposal_list = self.rpn_head.forward_train(
@@ -147,18 +146,15 @@ class TwoStageDetector(BaseDetector):
         else:
             proposal_list = proposals
             
-        if return_proposals:
-            kwargs['return_proposals'] = True
-            proposals = self.roi_head.forward_train(x, img_metas, proposal_list,
-                                                 gt_bboxes, gt_labels,
-                                                 gt_bboxes_ignore, gt_masks,
-                                                 **kwargs)
-            return proposals
-        else:
-            roi_losses = self.roi_head.forward_train(x, img_metas, proposal_list,
-                                                 gt_bboxes, gt_labels,
-                                                 gt_bboxes_ignore, gt_masks,
-                                                 **kwargs)
+
+        roi_losses = self.roi_head.forward_train(x, img_metas, proposal_list,
+                                                gt_bboxes, gt_labels,
+                                                gt_bboxes_ignore, gt_masks,
+                                                **kwargs)
+        # sample results instead
+        if return_sample_results:
+            return roi_losses
+        
         losses.update(roi_losses)
         
         return losses

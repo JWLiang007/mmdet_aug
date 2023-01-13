@@ -283,9 +283,9 @@ class CascadeRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     proposal_list = self.bbox_head[i].refine_bboxes(
                         bbox_results['rois'], roi_labels,
                         bbox_results['bbox_pred'], pos_is_gts, img_metas)
-        return_proposals=kwargs.pop('return_proposals',False)
-        if return_proposals :
-            return proposal_list
+        return_sample_results=kwargs.pop('return_sample_results',False)
+        if return_sample_results :
+            return sampling_results
         return losses
 
     def simple_test(self, x, proposal_list, img_metas, rescale=False):
