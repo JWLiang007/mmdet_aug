@@ -312,10 +312,10 @@ class FGDDistiller(BaseDetector):
             with torch.no_grad():
                 if  isinstance(self.teacher,TwoStageDetector):
                     kwargs_t['return_sample_results'] = True
-                    sample_results = self.teacher.forward_train(adv_img, img_metas, **kwargs_t)
+                sample_results = self.teacher.forward_train(adv_img, img_metas, **kwargs_t)
             if isinstance(self.student,TwoStageDetector):
                 kwargs_s['sample_results'] = sample_results
-                self.student.forward_train(adv_img, img_metas, **kwargs_s)
+            self.student.forward_train(adv_img, img_metas, **kwargs_s)
 
         elif self.with_adv_feature:
             self.student.forward_train_step_1(adv_img, img_metas)
