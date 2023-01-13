@@ -124,12 +124,15 @@ class TwoStageDetector(BaseDetector):
         Returns:
             dict[str, Tensor]: a dictionary of loss components
         """
+        override_proposals= kwargs.pop('override_proposals',False)
+        return_proposals=kwargs.pop('return_proposals',False)
+        
         x = self.extract_feat(img)
 
         losses = dict()
 
         # RPN forward and loss
-        if self.with_rpn:
+        if self.with_rpn and not override_proposals:
             proposal_cfg = self.train_cfg.get('rpn_proposal',
                                               self.test_cfg.rpn)
             rpn_losses, proposal_list = self.rpn_head.forward_train(
@@ -149,7 +152,8 @@ class TwoStageDetector(BaseDetector):
                                                  gt_bboxes_ignore, gt_masks,
                                                  **kwargs)
         losses.update(roi_losses)
-
+        if return_proposals:
+            return proposal_list
         return losses
 
     def forward_train_step_1(self,

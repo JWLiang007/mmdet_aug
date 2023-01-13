@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
 from mmdet.models.detectors.base import BaseDetector
+from mmdet.models.detectors.two_stage import TwoStageDetector
 from mmdet.models import build_detector
 from mmcv.runner import load_checkpoint, _load_checkpoint, load_state_dict
 from ..builder import DISTILLER, build_distill_loss
@@ -300,9 +301,16 @@ class FGDDistiller(BaseDetector):
                 self.teacher.forward_train_step_1(img, img_metas)
         self.img_type = 'adv'
         if self.with_adv_logit:
-            self.student.forward_train(adv_img, img_metas, **kwargs)
+            kwargs_s = kwargs.copy()
+            kwargs_t = kwargs.copy()
+            if isinstance(self.student,TwoStageDetector):
+                kwargs_s['return_proposals'] = True
+            res = self.student.forward_train(adv_img, img_metas, **kwargs_s)
             with torch.no_grad():
-                self.teacher.forward_train(adv_img, img_metas, **kwargs)
+                if  isinstance(self.teacher,TwoStageDetector):
+                    kwargs_t['override_proposals'] = True
+                    kwargs_t['proposals'] = res
+                self.teacher.forward_train(adv_img, img_metas, **kwargs_t)
         elif self.with_adv_feature:
             self.student.forward_train_step_1(adv_img, img_metas)
             with torch.no_grad():
