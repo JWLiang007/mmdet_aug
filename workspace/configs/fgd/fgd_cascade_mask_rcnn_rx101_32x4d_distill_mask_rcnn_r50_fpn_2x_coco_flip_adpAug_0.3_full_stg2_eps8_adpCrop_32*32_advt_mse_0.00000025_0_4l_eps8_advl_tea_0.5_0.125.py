@@ -60,6 +60,7 @@ distiller = dict(
                     loss_input_type="logit",
                     hook_type = 'input',
                     logit_filter="teacher",
+                    threshold_p = 0.0,
                     img_type = 'adv',
                     loss_param=adv_dkd_param,
                 ),

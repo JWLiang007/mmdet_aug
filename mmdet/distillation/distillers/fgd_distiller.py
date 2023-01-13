@@ -203,11 +203,13 @@ class FGDDistiller(BaseDetector):
                 val, idx = torch.max(_teacher_logit, 1)
                 p_n_ind = torch.zeros_like(val).bool()
                 # set positive anchor
-                pos_idx = torch.where(val > 0.7)[0]
+                threshold_p = item_loss.get('threshold_p',0.7)
+                pos_idx = torch.where(val >= threshold_p)[0]
                 p_n_ind[pos_idx] = True
                 # set negative anchor
                 if item_loss.get('with_neg', False):
-                    neg_idx = torch.where(val < 0.3)[0]
+                    threshold_n = item_loss.get('threshold_n',0.3)
+                    neg_idx = torch.where(val <= threshold_n)[0]
                     neg_idx = neg_idx[torch.randint(neg_idx.shape[0],
                                                     (pos_idx.shape[0] * 3, ))]
                     p_n_ind[neg_idx] = True
