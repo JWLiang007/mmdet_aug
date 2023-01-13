@@ -9,80 +9,80 @@ alpha_fgd = 0.00005
 beta_fgd = 0.000025
 gamma_fgd = 0.00005
 lambda_fgd = 0.0000005
-
-fgd_param = dict(
-    type="FGDLoss",
-    # name="fgd_loss",
-    student_channels=256,
-    teacher_channels=256,
-    temp=temp,
-    alpha_fgd=alpha_fgd,
-    beta_fgd=beta_fgd,
-    gamma_fgd=gamma_fgd,
-    lambda_fgd=lambda_fgd,
-)
-
 distiller = dict(
     type='FGDDistiller',
     teacher_pretrained=
-    'checkpoints/cascade_mask_rcnn_x101_32x4d_fpn_dconv_c3-c5_1x_coco-e75f90c8.pth',
-    init_student=True,
+    'checkpoints/cascade_mask_rcnn_x101_coco_20c_12.pth',
     distill_cfg=[
         dict(
-            student_module="neck.fpn_convs.0.conv",
-            teacher_module="neck.fpn_convs.0.conv",
+            student_module='neck.fpn_convs.3.conv',
+            teacher_module='neck.fpn_convs.3.conv',
+            output_hook=True,
             methods=[
                 dict(
-                    name="fgd_loss_fpn_0",
-                    loss_input_type="feature",
-                    hook_type='output',
-                    img_type='clean',
-                    loss_param=fgd_param,
-                ),
-            ],
-        ),
+                    type='FGDLoss',
+                    name='loss_fgd_fpn_3',
+                    student_channels=256,
+                    teacher_channels=256,
+                    temp=temp,
+                    alpha_fgd=alpha_fgd,
+                    beta_fgd=beta_fgd,
+                    gamma_fgd=gamma_fgd,
+                    lambda_fgd=lambda_fgd,
+                )
+            ]),
         dict(
-            student_module="neck.fpn_convs.1.conv",
-            teacher_module="neck.fpn_convs.1.conv",
+            student_module='neck.fpn_convs.2.conv',
+            teacher_module='neck.fpn_convs.2.conv',
+            output_hook=True,
             methods=[
                 dict(
-                    name="fgd_loss_fpn_1",
-                    loss_input_type="feature",
-                    hook_type='output',
-                    img_type='clean',
-                    loss_param=fgd_param,
-                ),
-            ],
-        ),
+                    type='FGDLoss',
+                    name='loss_fgd_fpn_2',
+                    student_channels=256,
+                    teacher_channels=256,
+                    temp=temp,
+                    alpha_fgd=alpha_fgd,
+                    beta_fgd=beta_fgd,
+                    gamma_fgd=gamma_fgd,
+                    lambda_fgd=lambda_fgd,
+                )
+            ]),
         dict(
-            student_module="neck.fpn_convs.2.conv",
-            teacher_module="neck.fpn_convs.2.conv",
+            student_module='neck.fpn_convs.1.conv',
+            teacher_module='neck.fpn_convs.1.conv',
+            output_hook=True,
             methods=[
                 dict(
-                    name="fgd_loss_fpn_2",
-                    loss_input_type="feature",
-                    hook_type='output',
-                    img_type='clean',
-                    loss_param=fgd_param,
-                ),
-            ],
-        ),
+                    type='FGDLoss',
+                    name='loss_fgd_fpn_1',
+                    student_channels=256,
+                    teacher_channels=256,
+                    temp=temp,
+                    alpha_fgd=alpha_fgd,
+                    beta_fgd=beta_fgd,
+                    gamma_fgd=gamma_fgd,
+                    lambda_fgd=lambda_fgd,
+                )
+            ]),
         dict(
-            student_module="neck.fpn_convs.3.conv",
-            teacher_module="neck.fpn_convs.3.conv",
+            student_module='neck.fpn_convs.0.conv',
+            teacher_module='neck.fpn_convs.0.conv',
+            output_hook=True,
             methods=[
                 dict(
-                    name="fgd_loss_fpn_3",
-                    loss_input_type="feature",
-                    hook_type='output',
-                    img_type='clean',
-                    loss_param=fgd_param,
-                ),
-            ],
-        ),
-
-    ],
-)
+                    type='FGDLoss',
+                    name='loss_fgd_fpn_0',
+                    student_channels=256,
+                    teacher_channels=256,
+                    temp=temp,
+                    alpha_fgd=alpha_fgd,
+                    beta_fgd=beta_fgd,
+                    gamma_fgd=gamma_fgd,
+                    lambda_fgd=lambda_fgd,
+                )
+            ]),
+    ])
 
 student_cfg = 'configs/mask_rcnn_coco_20c/mask_rcnn_r50_fpn_2x_coco.py'
 teacher_cfg = 'configs/dcn_coco_20c/cascade_mask_rcnn_x101_32x4d_fpn_dconv_c3-c5_1x_coco.py'
