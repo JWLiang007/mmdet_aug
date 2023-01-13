@@ -1,4 +1,4 @@
-_base_ = ["./fgd_retina_rx101_64x4d_distill_retina_r50_fpn_1x_coco.py"]
+_base_ = ["./mgd_retina_rx101_64x4d_distill_retina_r50_fpn_1x_coco.py"]
 
 # model settings
 find_unused_parameters = True
