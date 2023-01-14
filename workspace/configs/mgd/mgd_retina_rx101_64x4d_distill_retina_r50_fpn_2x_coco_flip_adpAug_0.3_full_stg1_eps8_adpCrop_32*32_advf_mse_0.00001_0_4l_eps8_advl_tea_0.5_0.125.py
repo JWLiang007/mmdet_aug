@@ -2,8 +2,8 @@ _base_ = ["./mgd_retina_rx101_64x4d_distill_retina_r50_fpn_2x_coco.py"]
 
 # model settings
 find_unused_parameters = True
-alpha_mgd = 0.0000005
-lambda_mgd = 0.45
+alpha_mgd=0.00002
+lambda_mgd=0.65
 # adv loss settings
 alpha_adv = 0.00001
 loss_type = "mse"
