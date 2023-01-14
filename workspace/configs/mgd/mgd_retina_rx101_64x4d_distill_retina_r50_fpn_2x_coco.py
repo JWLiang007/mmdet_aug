@@ -76,3 +76,5 @@ distiller = dict(
 student_cfg = 'configs/retinanet/retinanet_r50_fpn_2x_coco.py'
 teacher_cfg = 'configs/retinanet/retinanet_x101_64x4d_fpn_1x_coco.py'
 optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=35, norm_type=2))
+
+custom_hooks = [dict(type='NumClassCheckHook'), dict(type='SetRunModeHook')]

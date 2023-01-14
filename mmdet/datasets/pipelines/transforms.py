@@ -463,7 +463,8 @@ class RandomFlip:
 
             results['flip'] = cur_dir is not None
             if 'flip_flag' in results:
-                assert isinstance(results['flip_flag'], bool) and results['flip_flag']==False
+                assert isinstance(results['flip_flag'],
+                                  bool) and results['flip_flag'] == False
                 results['flip'] = results['flip_flag']
                 cur_dir = None
 
@@ -582,18 +583,76 @@ class RandomShift:
         repr_str += f'(max_shift_px={self.max_shift_px}, '
         return repr_str
 
+
+@PIPELINES.register_module()
+class GaussianNoise:
+
+    def __init__(
+        self,
+        ratio=0.1,
+        size=32 * 32,
+        prob=0.3,
+        subst_full=False,
+        subst_stg='1',
+        flip_stg='0',
+    ):
+        self.ratio = ratio
+        self.size = size
+        self.prob = prob
+        self.subst_full = subst_full
+        self.subst_stg = subst_stg
+        self.flip_stg = flip_stg
+
+    def __call__(self, results):
+        if random.random() > self.prob:
+            return results
+        ori_img = results['img']
+        ori_img_copy = ori_img.copy()
+        assert ori_img.dtype == np.uint8
+        new_img = ori_img.copy().astype(np.float64)
+        magnitude = np.max([np.abs(np.max(ori_img)), np.abs(np.min(ori_img))])
+        new_img += np.random.normal(0, magnitude * self.ratio, ori_img.shape)
+        new_img = np.clip(new_img, 0, 255).astype(np.uint8)
+
+        find_s_bbox = False
+        all_s_bbox = True
+        for bbox in results['ann_info']['bboxes']:
+            ys, xs, ye, xe = bbox.astype(int)
+            bbox_size = (xe - xs) * (ye - ys)
+            if bbox_size < self.size:
+                ori_img[xs:xe, ys:ye, :] = new_img[xs:xe, ys:ye, :]
+                find_s_bbox = True
+            else:
+                all_s_bbox = False
+        if self.subst_full and ((find_s_bbox and self.subst_stg == '1') or
+                                (all_s_bbox and self.subst_stg == '2')):
+            results['img'] = new_img.copy()
+            return results
+        if not all_s_bbox and self.subst_stg == '2':
+            results['img'] = ori_img_copy
+        if (not find_s_bbox or not all_s_bbox) and self.flip_stg == '1':
+            results['flip_flag'] = False
+
+        return results
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        return repr_str
+
+
 @PIPELINES.register_module()
 class InstanceAug:
 
-    def __init__(self,
-                 size=32*32,
-                 prob=0.5,
-                 adaptive = True,
-                 show_dir = None,
-                 subst_full = False,
-                 subst_stg = '1',
-                 flip_stg = '0',
-                 ):
+    def __init__(
+        self,
+        size=32 * 32,
+        prob=0.5,
+        adaptive=True,
+        show_dir=None,
+        subst_full=False,
+        subst_stg='1',
+        flip_stg='0',
+    ):
         self.size = size
         self.prob = prob
         self.show_dir = show_dir
@@ -606,7 +665,7 @@ class InstanceAug:
         if random.random() > self.prob:
             return results
         assert 'adv' in results['img_fields'] or 'adp' in results['img_fields']
-        adv_img  = results['adv']
+        adv_img = results['adv']
         if 'adp' in results['img_fields']:
             adv_img = results['adp']
         if not self.adaptive:
@@ -617,28 +676,29 @@ class InstanceAug:
         find_s_bbox = False
         all_s_bbox = True
         for bbox in results['ann_info']['bboxes']:
-            ys,xs,ye,xe  = bbox.astype(int)
-            bbox_size = (xe - xs)*(ye - ys)
+            ys, xs, ye, xe = bbox.astype(int)
+            bbox_size = (xe - xs) * (ye - ys)
             if bbox_size < self.size:
-                ori_img[xs:xe,ys:ye,:] = adv_img[xs:xe,ys:ye,:]
+                ori_img[xs:xe, ys:ye, :] = adv_img[xs:xe, ys:ye, :]
                 out_img = ori_img.copy()
-                out_img[xs:xe,ys:ys+3,:] = (0,0,255)
-                out_img[xs:xe,ye:ye+3,:] = (0,0,255)
-                out_img[xs:xs+3,ys:ye,:] = (0,0,255)
-                out_img[xe:xe+3,ys:ye,:] = (0,0,255)
+                out_img[xs:xe, ys:ys + 3, :] = (0, 0, 255)
+                out_img[xs:xe, ye:ye + 3, :] = (0, 0, 255)
+                out_img[xs:xs + 3, ys:ye, :] = (0, 0, 255)
+                out_img[xe:xe + 3, ys:ye, :] = (0, 0, 255)
                 find_s_bbox = True
             else:
                 all_s_bbox = False
-        if self.subst_full and ( (find_s_bbox and self.subst_stg=='1') or  (all_s_bbox and self.subst_stg=='2')  ):
+        if self.subst_full and ((find_s_bbox and self.subst_stg == '1') or
+                                (all_s_bbox and self.subst_stg == '2')):
             results['img'] = adv_img.copy()
             return results
-        if not all_s_bbox and self.subst_stg=='2' :
+        if not all_s_bbox and self.subst_stg == '2':
             results['img'] = ori_img_copy
-        if (not find_s_bbox or not all_s_bbox ) and self.flip_stg == '1':
+        if (not find_s_bbox or not all_s_bbox) and self.flip_stg == '1':
             results['flip_flag'] = False
         if self.show_dir != None and find_s_bbox:
-            out_path = os.path.join(self.show_dir,results['ori_filename'])
-            mmcv.imwrite(out_img,out_path)
+            out_path = os.path.join(self.show_dir, results['ori_filename'])
+            mmcv.imwrite(out_img, out_path)
         return results
 
     def __repr__(self):
@@ -833,10 +893,10 @@ class RandomCrop:
                  allow_negative_crop=False,
                  recompute_bbox=False,
                  bbox_clip_border=True,
-                 adaptive = False,
-                 bbox_size = (32,32),
-                 subst_stg = '1',
-                 flip_stg='0'): # 1:(1+flip) 2:(2+flip)
+                 adaptive=False,
+                 bbox_size=(32, 32),
+                 subst_stg='1',
+                 flip_stg='0'):  # 1:(1+flip) 2:(2+flip)
         if crop_type not in [
                 'relative_range', 'relative', 'absolute', 'absolute_range'
         ]:
@@ -981,12 +1041,13 @@ class RandomCrop:
             all_s_bbox = True
 
             for bbox in results['ann_info']['bboxes']:
-                aera = ( bbox[2] - bbox[0] ) * ( bbox[3] - bbox[1] )
-                if aera < self.bbox_size:
+                area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
+                if area < self.bbox_size:
                     find_s_bbox = True
                 else:
                     all_s_bbox = False
-            if (self.subst_stg == '1' and find_s_bbox) or (self.subst_stg == '2' and all_s_bbox):
+            if (self.subst_stg == '1'
+                    and find_s_bbox) or (self.subst_stg == '2' and all_s_bbox):
                 if self.flip_stg == '2':
                     results['flip_flag'] = False
                 return results

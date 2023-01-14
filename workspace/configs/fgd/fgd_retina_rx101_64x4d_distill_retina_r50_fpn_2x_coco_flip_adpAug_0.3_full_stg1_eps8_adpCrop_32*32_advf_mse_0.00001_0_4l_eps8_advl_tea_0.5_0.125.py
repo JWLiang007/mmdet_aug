@@ -171,7 +171,7 @@ train_pipeline = [
     dict(type="LoadImageFromFile", adv_img="data/adv_coco_8_5/"),
     dict(type="LoadAnnotations", with_bbox=True),
     dict(type="InstanceAug", prob=0.3, subst_full=True, subst_stg="1"),
-    dict(type="RandomFlip", flip_ratio=0.0),
+    dict(type="RandomFlip", flip_ratio=0.5),
     dict(
         type="RandomCrop",
         crop_size=(0.8, 0.8),

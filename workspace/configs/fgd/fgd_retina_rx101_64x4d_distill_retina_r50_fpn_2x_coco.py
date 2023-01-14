@@ -99,3 +99,5 @@ optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=35, norm_type=2))
 data = dict(
     samples_per_gpu=2,
     workers_per_gpu=2,)
+
+custom_hooks = [dict(type='NumClassCheckHook'),dict(type='SetRunModeHook')]

@@ -18,14 +18,14 @@ class MGDLoss(nn.Module):
     def __init__(self,
                  student_channels,
                  teacher_channels,
-                 name,
+                #  name,
                  alpha_mgd=0.00002,
                  lambda_mgd=0.65,
                  ):
         super(MGDLoss, self).__init__()
         self.alpha_mgd = alpha_mgd
         self.lambda_mgd = lambda_mgd
-        self.name = name
+        # self.name = name
     
         if student_channels != teacher_channels:
             self.align = nn.Conv2d(student_channels, teacher_channels, kernel_size=1, stride=1, padding=0)

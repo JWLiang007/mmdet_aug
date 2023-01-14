@@ -98,6 +98,7 @@ class StandardRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     feats=[lvl_feat[i][None] for lvl_feat in x])
                 sampling_results.append(sampling_result)
 
+        sampling_results = kwargs.pop('sample_results',sampling_results)
         losses = dict()
         # bbox head forward and loss
         if self.with_bbox:
