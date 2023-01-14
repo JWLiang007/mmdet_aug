@@ -63,3 +63,5 @@ distiller = dict(
 student_cfg = 'configs/mask_rcnn/mask_rcnn_r50_fpn_2x_coco.py'
 teacher_cfg = 'configs/dcn/cascade_mask_rcnn_x101_32x4d_fpn_dconv_c3-c5_1x_coco.py'
 optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=35, norm_type=2))
+
+custom_hooks = [dict(type='NumClassCheckHook'), dict(type='SetRunModeHook')]
