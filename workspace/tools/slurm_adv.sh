@@ -20,6 +20,6 @@ srun -p ${PARTITION} \
     --ntasks-per-node=${GPUS_PER_NODE} \
     --cpus-per-task=${CPUS_PER_TASK} \
     --kill-on-bad-exit=1 \
-    --quotatype=spot
+    --quotatype=spot \
     ${SRUN_ARGS} \
     python -u tools/ta_GT.py ${CONFIG} ${CHECKPOINT} --launcher="slurm" ${PY_ARGS}
