@@ -21,4 +21,4 @@ srun -p ${PARTITION} \
     --cpus-per-task=${CPUS_PER_TASK} \
     --kill-on-bad-exit=1 \
     ${SRUN_ARGS} \
-    python -u tools/ta_GT.py ${CONFIG} ${CHECKPOINT} --launcher="slurm" ${PY_ARGS}
+    python -u ta_GT.py ${CONFIG} ${CHECKPOINT} --launcher="slurm" ${PY_ARGS}
