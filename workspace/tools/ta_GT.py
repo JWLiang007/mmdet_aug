@@ -14,7 +14,7 @@ from mmcv.runner import (get_dist_info, init_dist, load_checkpoint,
 
 # tag
 import sys
-sys.path.insert(0,"/mnt/lustre/zhouyuguang.vendor/siyuan/code/ijcai23/mmdet_aug/")
+sys.path.insert(0,"/mnt/lustre/zhouyuguang.vendor/siyuan/code/ijcai23/mmdet_aug/mmdet/")
 from mmdet.apis import multi_gpu_test, single_gpu_test
 from adversarial.adv import multi_gpu_adv, single_gpu_adv
 
