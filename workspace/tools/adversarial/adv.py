@@ -38,19 +38,7 @@ def single_gpu_adv(model,
 
     attack = ta_factory[args.method](model, args)
     for i, data in enumerate(data_loader):
-        img_metas = data['img_metas'][0].data[0]
-        img_tensor = data['img'][0].data[0]
-        file_exist = False
-        for img_meta in img_metas:
-            file_name= osp.join(args.show_dir, img_meta['ori_filename'])
-            if os.path.exists(file_name):
-                file_exist = True
-                prog_bar.update()
-            else:
-                file_exist = False
-                break
-        if file_exist :
-            continue
+
         adv = attack(data)
 
         batch_size = adv.shape[0]
@@ -104,7 +92,22 @@ def multi_gpu_adv(model, data_loader, args):
     time.sleep(2)  # This line can prevent deadlock problem in some cases.
     attack = ta_factory[args.method](model, args)
     for i, data in enumerate(data_loader):
-
+        img_metas = data['img_metas'][0].data[0]
+        img_tensor = data['img'][0].data[0]
+        batch_size = img_tensor.shape[0]
+        file_exist = False
+        for img_meta in img_metas:
+            file_name= osp.join(args.show_dir, img_meta['ori_filename'])
+            if os.path.exists(file_name):
+                file_exist = True
+                if rank == 0:
+                    for _ in range(batch_size * world_size):
+                        prog_bar.update()
+            else:
+                file_exist = False
+                break
+        if file_exist :
+            continue
         adv = attack(data)
 
         batch_size = adv.shape[0]
