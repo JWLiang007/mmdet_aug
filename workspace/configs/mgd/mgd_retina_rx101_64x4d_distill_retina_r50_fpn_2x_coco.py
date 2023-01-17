@@ -6,7 +6,7 @@ find_unused_parameters=True
 alpha_mgd=0.00002
 lambda_mgd=0.65
 distiller = dict(
-    type='MGDDistiller',
+    type='FGDDistiller',
     teacher_pretrained = 'checkpoints/retinanet_x101_64x4d_fpn_1x_coco_20200130-366f5af1.pth',
     init_student = True,
     distill_cfg = [ dict(student_module = 'neck.fpn_convs.4.conv',
