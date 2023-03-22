@@ -18,7 +18,7 @@ loss_type='mse'
 
 distiller = dict(
     type='FKDDistiller',
-    teacher_pretrained = 'checkpoints/retinanet_x101_64x4d_fpn_1x_coco_20200130-366f5af1.pth',
+    teacher_pretrained = 'checkpoints/retinanet_x101_64x4d_fpn_1x_voc.pth',
     # init_student = True,
     distill_cfg = [ dict(student_module = 'neck.fpn_convs.4.conv',
                          teacher_module = 'neck.fpn_convs.4.conv',
