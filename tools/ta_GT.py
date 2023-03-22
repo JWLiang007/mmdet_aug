@@ -170,11 +170,14 @@ def main():
         torch.backends.cudnn.benchmark = True
 
     # tag
+    _train_cfg = cfg.data.train
     if args.gen_adv_aug:
-        cfg.data.test.ann_file = cfg.data.train.ann_file
-        cfg.data.val.ann_file = cfg.data.train.ann_file
-        cfg.data.test.img_prefix = cfg.data.train.img_prefix
-        cfg.data.val.img_prefix = cfg.data.train.img_prefix
+        if hasattr(cfg.data.train,'dataset'):
+            _train_cfg = cfg.data.train.dataset
+        cfg.data.test.ann_file = _train_cfg.ann_file
+        cfg.data.val.ann_file = _train_cfg.ann_file
+        cfg.data.test.img_prefix = _train_cfg.img_prefix
+        cfg.data.val.img_prefix = _train_cfg.img_prefix
 
     if 'pretrained' in cfg.model:
         cfg.model.pretrained = None
@@ -237,7 +240,7 @@ def main():
         json_file = osp.join(args.work_dir, f'eval_{timestamp}.json')
 
     # build the dataloader
-    for p_cfg in  cfg.data.train.pipeline:
+    for p_cfg in  _train_cfg.pipeline:
         if 'type' in p_cfg.keys() :
             if p_cfg['type'] == 'LoadAnnotations':
                 cfg.data.test.pipeline.insert(1,p_cfg)
