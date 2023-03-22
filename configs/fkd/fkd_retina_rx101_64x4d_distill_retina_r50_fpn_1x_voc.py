@@ -100,15 +100,13 @@ distiller = dict(
 
 student_cfg = 'configs/pascal_voc/retinanet_r50_fpn_1x_voc0712.py'
 teacher_cfg = 'configs/pascal_voc/retinanet_x101_64x4d_fpn_1x_voc0712.py'
-# optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
-# optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=35, norm_type=2))
+optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
+optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=35, norm_type=2))
 data = dict(
     samples_per_gpu=2,
     workers_per_gpu=2,)
 
-# optimizer
-optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
-optimizer_config = dict(grad_clip=None)
+
 # learning policy
 # actual epoch = 3 * 3 = 9
 lr_config = dict(policy='step', step=[3])
