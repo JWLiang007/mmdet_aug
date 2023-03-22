@@ -11,6 +11,7 @@ import torch
 import torch.distributed as dist
 from .util import get_gt_bboxes_scores_and_labels
 from .difgsm import DIFGSM
+from .m_difgsm import M_DIFGSM
 from .tifgsm import  TIFGSM
 from .mifgsm import  MIFGSM
 from .vmifgsm import VMIFGSM
@@ -20,6 +21,7 @@ from mmcv.runner import get_dist_info
 from mmdet.core import encode_mask_results
 ta_factory = {
     'difgsm': DIFGSM,
+    'm_difgsm': M_DIFGSM,
     'tifgsm': TIFGSM,
     'mifgsm': MIFGSM,
     'vmifgsm': VMIFGSM
