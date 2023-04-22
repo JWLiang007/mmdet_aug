@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/datasets/coco_detection.py',
+    '../_base_/datasets/voc0712.py',
 #     '../_base_/schedules/schedule_1x.py', 
     '../_base_/default_runtime.py'
 ]
@@ -147,7 +147,7 @@ distiller = dict(
 student_cfg = 'configs/pascal_voc/retinanet_r50_fpn_1x_voc0712.py'
 teacher_cfg = 'configs/pascal_voc/retinanet_x101_64x4d_fpn_1x_voc0712.py'
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
-optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=35, norm_type=2))
+optimizer_config = dict( grad_clip=dict(max_norm=35, norm_type=2))
 
 # img_norm_cfg = dict(
 #     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
