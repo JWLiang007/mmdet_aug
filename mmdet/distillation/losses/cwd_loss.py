@@ -19,8 +19,12 @@ class ChannelWiseDivergence(nn.Module):
 
     def __init__(
         self,
+        name,
+        student_channels,
+        teacher_channels,
         tau=1.0,
         loss_weight=1.0,
+        
     ):
         super(ChannelWiseDivergence, self).__init__()
         self.tau = tau

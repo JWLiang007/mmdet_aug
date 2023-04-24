@@ -16,7 +16,7 @@ distiller = dict(
                                        name='loss_cwd_fpn_3',
                                        student_channels = 256,
                                        teacher_channels = 256,
-                                       weight = weight_cwd,
+                                       loss_weight = weight_cwd,
                                        tau = tau_cwd
                                        )
                                 ]
@@ -28,7 +28,7 @@ distiller = dict(
                                        name='loss_cwd_fpn_2',
                                        student_channels = 256,
                                        teacher_channels = 256,
-                                       weight = weight_cwd,
+                                       loss_weight = weight_cwd,
                                        tau = tau_cwd
                                        )
                                 ]
@@ -40,7 +40,7 @@ distiller = dict(
                                        name='loss_cwd_fpn_1',
                                        student_channels = 256,
                                        teacher_channels = 256,
-                                       weight = weight_cwd,
+                                       loss_weight = weight_cwd,
                                        tau = tau_cwd
                                        )
                                 ]
@@ -52,7 +52,7 @@ distiller = dict(
                                        name='loss_cwd_fpn_0',
                                        student_channels = 256,
                                        teacher_channels = 256,
-                                       weight = weight_cwd,
+                                       loss_weight = weight_cwd,
                                        tau = tau_cwd
                                        )
                                 ]
