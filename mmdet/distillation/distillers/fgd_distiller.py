@@ -5,7 +5,7 @@ from mmdet.models import build_detector
 from mmcv.runner import  load_checkpoint, _load_checkpoint, load_state_dict
 from ..builder import DISTILLER,build_distill_loss
 from collections import OrderedDict
-
+from queue import Queue
 
 
 
@@ -49,16 +49,22 @@ class FGDDistiller(BaseDetector):
         self.distill_losses = nn.ModuleDict()
         self.distill_cfg = distill_cfg
 
+        self.with_logit = False
+        self.logit_cache = {}
         student_modules = dict(self.student.named_modules())
         teacher_modules = dict(self.teacher.named_modules())
-        def regitster_hooks(student_module,teacher_module):
+        def regitster_hooks(student_module,teacher_module,input_type='feature'):
             def hook_teacher_forward(module, input, output):
-
+                if input_type == 'feature':
                     self.register_buffer(teacher_module,output)
+                elif not self.logit_cache[teacher_module].full():   # only cache adv's logit
+                    self.logit_cache[teacher_module].put(input)
                 
             def hook_student_forward(module, input, output):
-
+                if input_type == 'feature':
                     self.register_buffer( student_module,output )
+                elif not self.logit_cache[student_module].full():   # only cache adv's logit
+                    self.logit_cache[student_module].put(input)
             return hook_teacher_forward,hook_student_forward
         
         for item_loc in distill_cfg:
@@ -66,10 +72,15 @@ class FGDDistiller(BaseDetector):
             student_module = 'student_' + item_loc.student_module.replace('.','_')
             teacher_module = 'teacher_' + item_loc.teacher_module.replace('.','_')
 
-            self.register_buffer(student_module,None)
-            self.register_buffer(teacher_module,None)
-
-            hook_teacher_forward,hook_student_forward = regitster_hooks(student_module ,teacher_module )
+            input_type = item_loc.get('input_type','feature')
+            if input_type == 'logit': 
+                self.with_logit = True
+                self.logit_cache[student_module] = Queue(self.teacher.neck.num_outs)
+                self.logit_cache[teacher_module] = Queue(self.teacher.neck.num_outs)
+            else :
+                self.register_buffer(student_module,None)
+                self.register_buffer(teacher_module,None)
+            hook_teacher_forward,hook_student_forward = regitster_hooks(student_module ,teacher_module ,input_type)
             teacher_modules[item_loc.teacher_module].register_forward_hook(hook_teacher_forward)
             student_modules[item_loc.student_module].register_forward_hook(hook_student_forward)
 
@@ -130,10 +141,20 @@ class FGDDistiller(BaseDetector):
         """
         if 'adv' in kwargs.keys():
             adv_img = kwargs.pop('adv')
-            adv_feat_s = self.student.extract_feat(adv_img)
+
             with torch.no_grad():
                 self.teacher.eval()
-                adv_feat_t = self.teacher.extract_feat(adv_img)
+                if self.with_logit:
+                    self.teacher.forward_train(adv_img, img_metas, **kwargs )
+                else:
+                    adv_feat_t = self.teacher.extract_feat(adv_img)
+            
+            if self.with_logit:
+                self.student.forward_train(adv_img, img_metas, **kwargs )
+            else:
+                adv_feat_s = self.student.extract_feat(adv_img)
+                
+
 
         with torch.no_grad():
             self.teacher.eval()
@@ -148,13 +169,20 @@ class FGDDistiller(BaseDetector):
             student_module = 'student_' + item_loc.student_module.replace('.','_')
             teacher_module = 'teacher_' + item_loc.teacher_module.replace('.','_')
             
-            student_feat = buffer_dict[student_module]
-            teacher_feat = buffer_dict[teacher_module]
+            if  item_loc.get('input_type','feature') =='feature':
+                student_feat = buffer_dict[student_module]
+                teacher_feat = buffer_dict[teacher_module]
+            else:
+                raw_logit_s =  [ self.logit_cache[student_module].get(student_module) for i in range(self.logit_cache[student_module].qsize())]   # ()
+                raw_logit_t = [ self.logit_cache[teacher_module].get(teacher_module) for i in range(self.logit_cache[teacher_module].qsize())] 
+                assert self.logit_cache[student_module].empty() and self.logit_cache[teacher_module].empty()
 
             for item_loss in item_loc.methods:
                 loss_name = item_loss.name
                 if str(loss_name).startswith('adv'):
                     student_loss[loss_name] = self.distill_losses[loss_name](adv_feat_s,adv_feat_t)
+                elif item_loc.get('input_type','feature') =='logit':
+                    student_loss[loss_name] = self.distill_losses[loss_name](raw_logit_s,raw_logit_t)
 
                 else:
                     student_loss[loss_name] = self.distill_losses[loss_name](student_feat,teacher_feat,kwargs['gt_bboxes'], img_metas)
