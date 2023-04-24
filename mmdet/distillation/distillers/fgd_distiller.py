@@ -144,15 +144,14 @@ class FGDDistiller(BaseDetector):
 
             with torch.no_grad():
                 self.teacher.eval()
+                adv_feat_t = self.teacher.extract_feat(adv_img)
                 if self.with_logit:
-                    self.teacher.forward_train(adv_img, img_metas, **kwargs )
-                else:
-                    adv_feat_t = self.teacher.extract_feat(adv_img)
+                    self.teacher.bbox_head.forward_train(adv_feat_t, img_metas, **kwargs ) 
             
+            adv_feat_s = self.student.extract_feat(adv_img)
             if self.with_logit:
-                self.student.forward_train(adv_img, img_metas, **kwargs )
-            else:
-                adv_feat_s = self.student.extract_feat(adv_img)
+                self.student.bbox_head.forward_train(adv_feat_s, img_metas, **kwargs )
+                
                 
 
 
