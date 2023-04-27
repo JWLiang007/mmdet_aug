@@ -593,8 +593,8 @@ class InstanceAug:
                  subst_full=False,
                  subst_stg='2',
                  # flip_stg = '0',
-                 mode='adv',
-                 corruption=None,   # param of corruption
+                 mode='single',
+                 corruption='adv',   # param of corruption
                  severity=None  # param of corruption
                  ):
         self.size = size
@@ -604,22 +604,34 @@ class InstanceAug:
         self.subst_stg = subst_stg
         # self.flip_stg = flip_stg
         self.mode = mode  # different high frequency noise
-        if self.mode == 'noise':
-            assert corruption is not None and severity is not None
         self.corruption = corruption
         self.severity = severity
+
+    def get_corrupt_img(self, results,corruption,severity=None):
+        if corruption == 'adv':
+            assert 'adv' in results['img_fields'] or 'adp' in results['img_fields']
+            corrupt_img = results['adv']
+            if 'adp' in results['img_fields']:
+                corrupt_img = results['adp']
+            
+        else :
+            assert severity is not None
+            corrupt_img = corrupt(results['img'].astype(np.uint8),
+                    corruption_name=corruption,
+                    severity=severity)
+        return corrupt_img
 
     def __call__(self, results):
         if random.random() > self.prob:
             return results
-        assert 'adv' in results['img_fields'] or 'adp' in results['img_fields']
-        adv_img = results['adv']
-        if 'adp' in results['img_fields']:
-            adv_img = results['adp']
-        if self.mode == 'noise':
-            adv_img = corrupt(results['img'].astype(np.uint8),
-                              corruption_name=self.corruption,
-                              severity=self.severity)
+        if self.mode == 'comb':
+            noise_set = []
+            for corruption,severity in zip(self.corruption,self.severity):
+                noise_set.append(self.get_corrupt_img(results,corruption,severity))
+            idx = random.choice(range(len(noise_set)))
+            corrupt_img = noise_set[idx]
+        else:
+            corrupt_img = self.get_corrupt_img(results,self.corruption,self.severity)
         ori_img = results['img']
         ori_img_copy = ori_img.copy()
         find_s_bbox = False
@@ -628,7 +640,7 @@ class InstanceAug:
             ys, xs, ye, xe = bbox.astype(int)
             bbox_size = (xe - xs)*(ye - ys)
             if bbox_size < self.size:
-                ori_img[xs:xe, ys:ye, :] = adv_img[xs:xe, ys:ye, :]
+                ori_img[xs:xe, ys:ye, :] = corrupt_img[xs:xe, ys:ye, :]
                 out_img = ori_img.copy()
                 out_img[xs:xe, ys:ys+3, :] = (0, 0, 255)
                 out_img[xs:xe, ye:ye+3, :] = (0, 0, 255)
@@ -638,7 +650,7 @@ class InstanceAug:
             else:
                 all_s_bbox = False
         if self.subst_full and ((find_s_bbox and self.subst_stg == '1') or (all_s_bbox and self.subst_stg == '2')):
-            results['img'] = adv_img.copy()
+            results['img'] = corrupt_img.copy()
             return results
         if not all_s_bbox and self.subst_stg == '2':
             results['img'] = ori_img_copy
@@ -994,12 +1006,13 @@ class RandomCrop:
                 while(True):
                     ious = bbox_overlaps(
                         ori_gt_bboxes[valid_idx], ori_gt_bboxes[valid_idx])
+                    ious = ious - 2 * np.identity(ious.shape[0])
                     ious_sum = ious.sum(1)
-                    if ious_sum.max() == 1:
+                    if ious_sum.max() == -1:
                         break
-                    keep_idx = random.choice(np.where(ious_sum != 1)[0], 1)[0]
+                    keep_idx = random.choice(np.where(ious_sum != -1)[0], 1)[0]
                     keep_mask = np.logical_or(
-                        ious[keep_idx] == 0, ious[keep_idx] == 1)
+                        ious[keep_idx] == 0, ious[keep_idx] == -1)
                     valid_idx = valid_idx[keep_mask]
 
                 results[key][valid_idx] = new_gt_bboxes[valid_idx]
