@@ -71,7 +71,7 @@ class M_DIFGSM(Attack):
             adv_images.requires_grad = True
 
             new_data['img'] = self.input_diversity(adv_images)
-
+            # self.model.module.bbox_head.training = True
             if 'gt_masks' in data.keys():
                 losses = self.model(**new_data, return_loss=True,gt_bboxes=data['gt_bboxes'][0].data[0],
                                 gt_labels=data['gt_labels'][0].data[0], gt_masks=  data['gt_masks'][0].data[0])
@@ -80,7 +80,7 @@ class M_DIFGSM(Attack):
                 losses = self.model(**new_data, return_loss=True,gt_bboxes=data['gt_bboxes'][0].data[0],
                                 gt_labels=data['gt_labels'][0].data[0])
                 loss_cls = sum(_loss.mean() for _loss in losses['loss_cls'])
-
+            # self.model.module.bbox_head.training = False
             self.model.zero_grad()
             loss_cls= loss_cls* (-1.0)
             loss_cls.backward()
